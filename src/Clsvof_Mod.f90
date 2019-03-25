@@ -2761,7 +2761,7 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause'ClsVof_2668'
+            pause 'ClsVof_2668'
           end if
      !  For boom cylinder
      !     dx=TGrid%x(i,j)-BoomCase%Posp%x
@@ -2925,7 +2925,7 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause'ClsVof_2804'
+            pause 'ClsVof_2804'
           end if
           call frac(nxx(i,j),nyy(i,j),TCell%phiS(i,j),TGrid%dx(i,j),           &
                                                       TGrid%dy(i,j),vol)
@@ -3080,7 +3080,7 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause'ClsVof_2875'
+            pause 'ClsVof_2875'
           end if
         end do
       end do

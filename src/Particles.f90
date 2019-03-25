@@ -148,7 +148,7 @@ Module Particles
               print*,
               print*,TraPar%Posp(i)%x,TraPar%Posp(i)%y
               print*,PCell%vof(ii,jj)
-              pause'Particle 127'
+              pause 'Particle 127'
             end if
             Upo(i)=Upn(i)
             Vpo(i)=Vpn(i)
