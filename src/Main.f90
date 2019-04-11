@@ -33,6 +33,8 @@ Program Main
     open(unit=5,file='input.dat',action='read')
     read(5,*),
     read(5,*), Isize, Jsize, Irec, Jrec, Rey, Hw, iprint
+    read(5,*),
+    read(5,'(a70)'), dir
     close(5)
     Isize=500
     Jsize=160
@@ -147,10 +149,11 @@ Program Main
     nuref=nuw
     rop=711.d0
     Hw=6.0d0/Lref !DWedge
-    HChannel=8.d0/Lref
+    HDomain=8.d0
+    HChannel=80.d0/Lref
     LChannel=25.d0/Lref
-    Ha=HChannel-Hw
-    Depthw=Hw
+    Ha=HDomain-Hw
+    Depthw=HChannel-Ha
   ! for sinusoidal wave
     twp=1.131371d0
     Lamdaw=g*twp**2.d0/2.d0/pi
@@ -163,20 +166,20 @@ Program Main
     omew=2.d0*pi/twp
  !   Start_Point%x=-6.5/Lref
     Start_Point%x=0.d0/Lref
-    Start_point%y=0.d0 !-Hw/Lref
+    Start_point%y=(HChannel-HDomain)/Lref !-Hw/Lref
  !   End_Point%x=6.5d0/Lref
     End_Point%x=LChannel/Lref
     End_Point%y=HChannel/Lref
     BoomCase%Posp%x=15.d0/Lref
-    BoomCase%Posp%y=Hw
-    BoomCase%Dobj=0.6d0/Lref
+    BoomCase%Posp%y=Depthw
+    BoomCase%Dobj=0.8d0/Lref
     BoomCase%Wobj=0.16d0/Lref
     BoomCase%XBar1=BoomCase%Posp%x-BoomCase%Wobj/2.d0
     BoomCase%XBar2=BoomCase%Posp%x+BoomCase%Wobj/2.d0
     BoomCase%LBar=1.5d0/Lref
     BoomCase%YBar=BoomCase%Posp%y-dsqrt((BoomCase%Dobj/2.d0)**2.d0-                &
                  (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
-    BoomCase%Mobj=(pi/4.d0*(BoomCase%Dobj)**2.d0+BoomCase%Wobj*BoomCase%LBar)*rop/Roref
+    BoomCase%Mobj=(pi/4.d0*(BoomCase%Dobj)**2.d0+BoomCase%Wobj*BoomCase%LBar)*0.5d0*rop/Roref
 
     UwInlet=1.d0/Uref
     UgInlet=3.d0/Uref
@@ -188,7 +191,7 @@ Program Main
     ReS%x=13.5d0/Lref
     ReS%y=0.2d0/Lref
     ReE%x=16.0d0/Lref
-    ReE%y=0.6d0/Lref
+    ReE%y=0.8d0/Lref
     zp=1.d-2/Lref
     Irec=375
     Jrec=60
@@ -198,7 +201,9 @@ Program Main
     gy=g
     VofInlet=1.d0
     RunAgain=.FALSE.
-    IttRun=350
+!   define corner problem
+    ICorProb=.TRUE.
+    IttRun=600
     call Initial_Grid(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,PGrid,Lref,0)
     call InitialUVGrid(PGrid,UGrid,0,Lref)
     call InitialUVGrid(PGrid,VGrid,1,Lref)

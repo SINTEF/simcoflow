@@ -45,7 +45,7 @@ Module Solver
       INTEGER(kind=it4b):: iprint1,i,j
       INTEGER(kind=it8b):: itt,tempvel
       REAL(KIND=dp):: velaver,timeb
-      CHARACTER(LEN=80):: filename
+      CHARACTER(LEN=80):: filename,curd
       allocate(Flux_n1(0:Isize+1,0:Jsize+1,2))
       Flux_n1(:,:,:)=0.d0
       allocate(GraP(1:Isize,1:Jsize))
@@ -162,27 +162,30 @@ Module Solver
 
     ! Calculate threshold for MUSCL limiter
       if(RunAgain.eqv..TRUE.) then
-        filename=trim(adjustl(dir))//'Tecplot/Pressure_00000350.dat'
+        Write(curd,'(i8.8)') IttRun
+        filename=trim(adjustl(dir))//'Tecplot/Pressure_'//trim(curd)//'.dat'
         call ReadOldDataPCell(filename,PCell,TVar,Flux_n1)
-        filename=trim(adjustl(dir))//'Tecplot/00000350Uvelocity.dat'
+        filename=trim(adjustl(dir))//'Tecplot/Uvelocity_'//trim(curd)//'.dat'
         call ReadOldDataVelocityCell(filename,UCell,TVar%u)
-        filename=trim(adjustl(dir))//'Tecplot/00000350Vvelocity.dat'
+        filename=trim(adjustl(dir))//'Tecplot/Vvelocity_'//trim(curd)//'.dat'
         call ReadOldDataVelocityCell(filename,VCell,TVar%v)
-        filename=trim(adjustl(dir))//'Tecplot/00000350Particles.dat'
+        filename=trim(adjustl(dir))//'Tecplot/Particles_'//trim(curd)//'.dat'
         call ReadOldDataParticle(filename,TraPar,TVar)
         filename=trim(adjustl(dir))//'Convergence.dat'
         call ReadFileConvergence(filename,Time,PConv,BoomCase)
+        BoomCase%XBar1=BoomCase%Posp%x-BoomCase%Wobj/2.d0
+        BoomCase%XBar2=BoomCase%Posp%x+BoomCase%Wobj/2.d0
+        BoomCase%LBar=1.5d0/Lref
+        BoomCase%YBar=BoomCase%Posp%y-dsqrt((BoomCase%Dobj/2.d0)**2.d0-        &
+                 (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
+
         call SolidVolumeFraction(PGrid,PCell,BoomCase)
         call SolidVolumeFraction(UGrid,UCell,BoomCase)
         call SolidVolumeFraction(VGrid,VCell,BoomCase)
 
- !       print*,BoomCase%vs
- !       print*,BoomCase%Posp%x
- !       print*,BoomCase%Posp%y
- !       print*,
         call Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,IttRun)
         call NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
-        call Boundary_Condition_Var(PGrid,TVar,Time%NondiT)
+ !       call Boundary_Condition_Var(PGrid,TVar,Time%NondiT)
         Time%PhysT = Time%Nondit*PGrid%Lref/TVar%URef
         IttBegin=IttRun+1
 !        BoomCase%us=0.d0
@@ -191,10 +194,10 @@ Module Solver
         IttBegin=1
       end if
       do itt = IttBegin,Time%iter
-        if(itt>=380) then
-      !    print*,itt
-      !    iprint1=1
-        end if
+!        if(itt>=610) then
+!          print*,itt
+!          iprint1=1
+!        end if
        ! if(itt==365) pause
         call AdamBasforthCrankNicolson(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO, &
                  PCell,UCell,VCell,TVar,UConv,VConv,PConv,Time,Flux_n1,TraPar, &
@@ -202,7 +205,7 @@ Module Solver
         if(mod(itt,IParInlet)==0) then
           call ParticleInletCondition(PGrid,PCell,TraPar)
         end if
-        call TrackingParticles(PGrid,PCell,TVar,Time%dt,TraPar)
+        call TrackingParticles(PGrid,PCell,BoomCase,TVar,Time%dt,TraPar)
         Time%NondiT = Time%NondiT+Time%dt
         Time%PhysT = Time%Nondit*PGrid%Lref/TVar%URef
         if(itt==1) then
@@ -274,7 +277,11 @@ Module Solver
       call ComputeForceObject(BoomCase,PGrid,PCell,VCell,TVar,ForceObj)
    !   BoomCase%asy=-(1.14d0*omew)**2.d0*Amp0*dsin(1.14d0*omew*Time%NondiT+pi/2.d0)/    &
    !                 (TVar%Uref**2.d0/Lref)
-      BoomCase%asy=(ForceObj-BoomCase%Mobj*g)/BoomCase%Mobj
+      if(RunAgain.eqv..FALSE.) then
+        BoomCase%asy=(ForceObj-BoomCase%Mobj*g)/BoomCase%Mobj
+      elseif(itt>ittRun+1) then
+        BoomCase%asy=(ForceObj-BoomCase%Mobj*g)/BoomCase%Mobj
+      end if
       BoomCase%asx=0.d0
       if(itt<10) then
         BoomCase%us=0.d0
@@ -295,23 +302,7 @@ Module Solver
                                                              SParV,BoomCase,1)
         call Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,itt)
         call NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
-      !  if(itt>200) then
-      !    print*,'Test UCell Center Solver_Mod'
-      !    print*,UCell%Cell_Cent(300,165,2),UCell%Cell_Cent(300,166,2)
-      !    print*,UCell%Cell_Cent(300,165,1),UCell%Cell_Cent(300,166,1)
-      !    print*,
-      !    print*,UCell%MoExCell(300,165)
-      !    print*,'PCell FCE'
-      !    print*,PCell%FCE(300,165,1),PCell%FCE(300,166,1)
-      !    print*,PCell%FCE(300,165,2),PCell%FCE(300,166,2)
-      !    print*,'vof UCell'
-      !    print*,UCell%vofS(300,165),UCell%VoFS(300,166)
-      !    print*,'vof PCell'
-      !    print*,PCell%vofS(300,165),PCell%VoFS(300,166)
-      !    print*,PCell%EEDge_Area(300,166)
-      !    print*,'end'
-      !  end if
-        call Boundary_Condition_Var(PGrid,TVar,Time%NondiT)
+        call Boundary_Condition_Var(PGrid,PCell,TVar,Time%NondiT)
         call InterNewVar(PCellO,UCellO,VCellO,PCell,UCell,VCell,PGrid,TVar,    &
                                                                 BoomCase%vs)
       else
@@ -334,9 +325,6 @@ Module Solver
       TYPE(SolidObject),INTENT(IN):: BoomCase
       TYPE(SolverTime),INTENT(OUT):: Time
       INTEGER(kind=it4b):: i,j
-      REAL(KIND=dp):: xwu,ywu
-      xwu=UGrid%x(1,1)-UGrid%dx(1,1)
-      ywu=Amp0*dsin(kw*(xwu-cw0*Time%NondiT))
       Time%dt = 1.d0
       do j = jbeg,jbeg+Jsize-1
         do i = ibeg,ibeg+Isize-1
@@ -348,18 +336,10 @@ Module Solver
           Time%dt=dmin1(Time%dt,Time%cfl*Vgrid%dy(i,j)/(TVar%Vint/TVar%Uref))
           Time%dt=dmin1(Time%dt,Time%cfl*Vgrid%dy(i,j)/dabs(BoomCase%vs))
           Time%dt=dmin1(Time%dt,(-BoomCase%vs+                                 &
-             dsqrt(dmax1(dabs(BoomCase%vs**2.d0+dabs(BoomCase%asy)*0.1d0*      &
+             dsqrt(dmax1(dabs(BoomCase%vs**2.d0+2.d0*dabs(BoomCase%asy)*0.05d0* &
              VGrid%dy(i,j)),1d-30)))/dabs(BoomCase%asy+1.d-20))
         end do
         Time%dt=dmin1(Time%dt,Time%cfl*Ugrid%dx(1,j)/dabs(TVar%u(0,j)))
-      end do
-      do i=1,7
-        if(Time%PhysT<tprint(i).and.Time%PhysT+Time%dt>=tprint(i)) then
-          Time%dt=tprint(i)-Time%PhysT
-          WavePrint=i
-          print*,Time%physT,Time%dt,i
-          print*,
-        end if
       end do
     END SUBROUTINE ComputeTimeStep
 
@@ -371,10 +351,10 @@ Module Solver
       TYPE(SolidObject),INTENT(IN)      :: BoomCase
       open(unit=5,file=trim(adjustl(dir))//'Convergence.dat',access='append')
       write(5,76) itt,Time%NondiT,TNorm%N1,TNorm%N2,TNorm%Ninf,TNorm%N1c,      &
-                                        TNorm%N2c,TNorm%Ninfc,BoomCase%Posp%y, &
-                     BoomCase%PospO%y,BoomCase%vs
+                     TNorm%N2c,TNorm%Ninfc,BoomCase%Posp%y,                    &
+                     BoomCase%PospO%y,BoomCase%vs,BoomCase%asy
       close(5)
- 76	  format(I10,10(f24.14))
+ 76	  format(I10,11(f24.14))
     END SUBROUTINE
 
     SUBROUTINE InterNewVar(PCellO,UCellO,VCellO,PCell,UCell,VCell,PGrid,TVar,vb)
@@ -384,12 +364,12 @@ Module Solver
        TYPE(Grid),INTENT(IN):: PGrid
        REAL(KIND=dp),intent(in):: vb
        INTEGER(KIND=it4b):: i,j,ii,jj,temp
-       REAL(KIND=dp):: Pu,Pv,SumP,vfa
-       Do i = ibeg,ibeg+Isize-1
-         Do j = jbeg,jbeg+Jsize-1
+       REAL(KIND=dp):: Pu,Pv,SumP,vfa,uleft,uright,vbot,vtop
+       do i = ibeg,ibeg+Isize-1
+         do j = jbeg,jbeg+Jsize-1
            ! For pressure cell
            ! from momentum exchange cell to normal cut cell
-           If(UCellO%MoExCell(i,j)==1.and.UCell%MoExCell(i,j)==0) then
+           if(UCellO%MoExCell(i,j)==1.and.UCell%MoExCell(i,j)==0) then
              ii = UCellO%MsCe(i,j,1)
              jj = UCellO%MsCe(i,j,2)
             ! TVar%u(ii,jj) = TVar%u(ii,jj)*(UCellO%vof(i,j)+UCellO%vof(ii,jj))/  &
@@ -399,24 +379,49 @@ Module Solver
             !                 UCellO%vof(i,j)*(1.d0-UCell%delh(i,j)/            &
             !                 UCell%delh(ii,jj)))/UCellO%vof(ii,jj)
             !  TVar%u(i,j) = TVar%u(i,j)*UCell%delh(i,j)/UCell%delh(ii,jj)
-           End if
+           end if
            ! from normal cut cell to momentum exchange cell
-           If(UCell%MoExCell(i,j)==1.and.UCellO%MoExCell(i,j)==0) then
+           if(UCell%MoExCell(i,j)==1.and.UCellO%MoExCell(i,j)==0) then
              ii = UCell%MsCe(i,j,1)
              jj = UCell%MsCe(i,j,2)
             ! TVar%u(ii,jj) = (TVar%u(i,j)*UCellO%vof(i,j)+TVar%u(ii,jj)*        &
             !                UCellO%vof(ii,jj))/(UCellO%vof(i,j)+UCellO%vof(ii,jj))
             ! TVar%u(i,j) = TVar%u(ii,jj)
-           End if
+           end if
            ! for U-velocity (New velocity cell)
-           If(UCellO%VofS(i,j)>1.d0-epsi.and.UCell%VofS(i,j)<1.d0-epsi) then
+           if(UCellO%VofS(i,j)>1.d0-epsi.and.UCell%VofS(i,j)<1.d0-epsi) then
              ii = UCell%MsCe(i,j,1)
              jj = UCell%MsCe(i,j,2)
            ! print*,'new u',i,j
              TVar%u(i,j) = 0.d0 !TVar%u(ii,jj)
-           End if
+             if(PCell%EEdge_Area(i,j)>epsi) then
+               uleft=((-TVar%v(i,j)*PCell%NEdge_Area(i,j)+                     &
+                        TVar%v(i,j-1)*PCell%SEdge_Area(i,j))*                  &
+                        PGrid%dx(i,j)+TVar%u(i-1,j)*                           &
+                        PCell%WEdge_Area(i,j)*PGrid%dy(i,j)+                   &
+                        vb*PCell%nyS(i,j)*PCell%Wllh(i,j))/                    &
+                       (PCell%EEdge_Area(i,j)+1.d-30)/PGrid%dy(i,j)
+             else
+               uleft=0.d0
+             end if
+             if(PCell%WEdge_Area(i+1,j)>epsi) then
+               uright=((TVar%v(i+1,j)*PCell%NEdge_Area(i+1,j)-                 &
+                        TVar%v(i+1,j-1)*PCell%SEdge_Area(i+1,j))*              &
+                        PGrid%dx(i+1,j)+TVar%u(i+1,j)*                         &
+                        PCell%EEdge_Area(i+1,j)*PGrid%dy(i+1,j)-               &
+                        vb*PCell%nyS(i+1,j)*PCell%Wllh(i+1,j))/                &
+                        (PCell%WEdge_Area(i+1,j)+1.d-30)/PGrid%dy(i+1,j)
+             else
+               uright=0.d0
+             end if
+!             TVar%u(i,j)=0.5d0*(uleft+uright)
+!             print*,'Interpolation var'
+!             print*,i,j
+!             print*,uleft,uright
+!             pause'pause to test'
+           end if
            ! from momentum exchange cell to normal cut cell
-           If(VCellO%MoExCell(i,j)==1.and.VCell%MoExCell(i,j)==0) then
+           if(VCellO%MoExCell(i,j)==1.and.VCell%MoExCell(i,j)==0) then
              ii = VCellO%MsCe(i,j,1)
              jj = VCellO%MsCe(i,j,2)
            !  TVar%v(ii,jj) = TVar%v(ii,jj)*(VCell%vof(i,j)+VCell%vof(ii,jj))/  &
@@ -426,24 +431,68 @@ Module Solver
            !  TVar%v(ii,jj) = (TVar%v(ii,jj)*VCell%vof(ii,jj)+TVar%v(i,j)*      &
            !                  VCell%vof(i,j)-vfa*VCell%vof(i,j))/VCell%vof(ii,jj)
            !  TVar%v(i,j) = vfa
-           End if
+           end if
            ! from normal cut cell to momentum exchange cell
-           If(VCell%MoExCell(i,j)==1.and.VCellO%MoExCell(i,j)==0) then
+           if(VCell%MoExCell(i,j)==1.and.VCellO%MoExCell(i,j)==0) then
              ii = VCell%MsCe(i,j,1)
              jj = VCell%MsCe(i,j,2)
            !  TVar%v(ii,jj) = (TVar%v(i,j)*VCell%vof(i,j)+TVar%v(ii,jj)*        &
            !                 VCell%vof(ii,jj))/(VCell%vof(i,j)+VCell%vof(ii,jj))
            !  TVar%v(i,j) = TVar%v(ii,jj)
-           End if
+           end if
            ! for V-velocity (new velocity cell)
-           If(VCellO%VofS(i,j)>1.d0-epsi.and.VCell%VofS(i,j)<1.d0-epsi) then
+           if(VCellO%VofS(i,j)>1.d0-epsi.and.VCell%VofS(i,j)<1.d0-epsi) then
              ii = VCell%MsCe(i,j,1)
              jj = VCell%MsCe(i,j,2)
              TVar%v(i,j) = vb !TVar%v(ii,jj)!
-           End if
-         End do
-       End do
-    End subroutine InterNewVar
+             if(PCell%Nedge_Area(i,j)>epsi) then
+
+               vbot=((-TVar%u(i,j)*PCell%EEdge_Area(i,j)                       &
+                      +TVar%u(i-1,j)*PCell%WEdge_Area(i,j))*PGrid%dy(i,j)      &
+                      +TVar%v(i,j-1)*PCell%SEdge_Area(i,j)*PGrid%dx(i,j))      &
+                      /PGrid%dx(i,j)/(PCell%NEdge_Area(i,j)+1.d-30)
+             else
+               vbot=vb
+             end if
+             if(PCell%SEdge_Area(i,j+1)>epsi) then
+               vtop=((TVar%u(i,j+1)*PCell%EEdge_Area(i,j+1)                    &
+                     -TVar%u(i-1,j+1)*PCell%WEdge_Area(i,j+1))*PGrid%dy(i,j+1) &
+                     +TVar%v(i,j+1)*PCell%NEdge_Area(i,j+1)*PGrid%dx(i,j+1))   &
+                     /PGrid%dx(i,j+1)/(PCell%SEdge_Area(i,j+1)+1.d-30)
+             else
+               vbot=vb
+             end if
+!             TVar%v(i,j)=0.5d0*(vbot+vtop)
+           end if
+           if(PCell%NEdge_Area(i,j)>epsi.and.PCellO%NEdge_Area(i,j)>epsi) then
+             if(PCell%NEdge_Area(i,j)>0.5d0.or.PCellO%NEdge_Area(i,j)>0.5d0) then
+               if(PCellO%NEdge_Area(i,j)/PCell%NEdge_Area(i,j)<0.6d0) then
+                 TVar%v(i,j)=TVar%v(i,j)*PCellO%NEdge_Area(i,j)/PCell%NEdge_Area(i,j)
+!                 print*,'this for interpolation VVVVVVVVVVVVVVV'
+!                 print*,i,j
+!                 print*,PCellO%NEdge_Area(i,j),PCell%NEdge_Area(i,j)
+!                 print*,PCellO%NEdge_Area(i,j)/PCell%NEdge_Area(i,j)
+!                 print*,TVar%v(i,j)
+!                 print*,'*************************'
+               end if
+             end if
+           end if
+           if(PCell%EEdge_Area(i,j)>epsi.and.PCellO%EEdge_Area(i,j)>epsi) then
+             if(PCell%EEdge_Area(i,j)>0.5d0.or.PCellO%EEdge_Area(i,j)>0.5d0) then
+               if(PCellO%EEdge_Area(i,j)/PCell%EEdge_Area(i,j)<0.6) then
+                 TVar%u(i,j)=TVar%u(i,j)*PCellO%EEdge_Area(i,j)/PCell%EEdge_Area(i,j)
+!                 print*,'this for interpolation UUUUUUUUUUUUUUU'
+!                 print*,i,j
+!                 print*,PCellO%EEdge_Area(i,j),PCell%EEdge_Area(i,j)
+!                 print*,PCellO%EEdge_Area(i,j)/PCell%EEdge_Area(i,j)
+!                 print*,TVar%u(i,j)
+!                 print*,'*************************'
+               end if
+             end if
+           end if
+         end do
+       end do
+    END SUBROUTINE InterNewVar
 
     SUBROUTINE ReadFileConvergence(filename,Time,TNorm,BoomCase)
       IMPLICIT NONE
@@ -456,10 +505,10 @@ Module Solver
       do i=1,IttRun
         read(5,76) j,Time%NondiT,TNorm%N1,TNorm%N2,TNorm%Ninf,         &
                      TNorm%N1c, TNorm%N2c,TNorm%Ninfc,BoomCase%Posp%y, &
-                     BoomCase%PospO%y,BoomCase%vs
+                     BoomCase%PospO%y,BoomCase%vs,BoomCase%asy
       end do
       close(5)
-  76  format(I10,10(f24.14))
+  76  format(I10,11(f24.14))
     END SUBROUTINE ReadFileConvergence
 
 
@@ -595,55 +644,55 @@ Module Solver
       end do
     END SUBROUTINE CopyNewCell
 
-    SUBROUTINE WaveBoundaryCondition(PGrid,Vari,Time)
-      TYPE(Grid),INTENT(IN):: PGrid
-      TYPE(Variables),INTENT(INOUT):: Vari
-      TYPE(SolverTime),INTENT(IN):: Time
-      INTEGER(kind=it8b):: i,j
-      REAL(KIND=dp):: etau,etav
-      etau=amp0*dsin(2.d0*pi/Lamdaw*(-cw0*Time%NondiT))
-      etav=amp0*dsin(2.d0*pi/Lamdaw*(-PGrid%dx(1,1)/2.d0-cw0*Time%NondiT))
-      do j=jbeg,Jsize+jbeg-1
-      ! Left inlet wall
-        Vari%p(ibeg-ight,j)=Vari%p(ibeg,j) !Vari%Pint/(Vari%Pref)
-        Vari%t(ibeg-ight,j)=Vari%t(ibeg,j)
-        if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Hw+etau) then
-        ! for water entry velocity
-          Vari%u(ibeg-ight,j)=2.d0*pi/Lamdaw*cw0*etau*                         &
-                 dcosh(2.d0*pi*PGrid%y(1,j))/dsinh(2.d0*pi*Hw)
-        else
-        ! for gas entry velocity
-          Vari%u(ibeg-ight,j)=-2.d0*pi/Lamdaw*cw0*etau*                        &
-                 dcosh(2.d0*pi*(HChannel-PGrid%y(1,j)))/dsinh(2.d0*pi*Ha)
-        end if
-        if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Hw+etav) then
-          Vari%v(ibeg-ight,j)=-Amp0*2.d0*pi/cw0*                               &
-                dcos(2.d0*pi/Lamdaw*(-PGrid%dx(1,1)/2.d0-cw0*Time%NondiT))*    &
-                dsinh(2.d0*pi*PGrid%y(1,j))/dsinh(2.d0*pi*Hw)
-        else
-          Vari%v(ibeg-ight,j)=Amp0*2.d0*pi/cw0*                                &
-                dcos(2.d0*pi/Lamdaw*(-PGrid%dx(1,1)/2.d0-cw0*Time%NondiT))*    &
-                dsinh(2.d0*pi*(HChannel-PGrid%y(1,j)))/dsinh(2.d0*pi*Ha)
-        end if
-      ! Right Wall non-Slip wall
-        Vari%p(Isize+ibeg+ight-1,j)=Vari%p(Isize+ibeg-1,j)
-        Vari%t(Isize+ibeg+ight-1,j)=Vari%t(ibeg+Isize-1,j)
-        Vari%u(Isize+ibeg+ight-1,j)=0.d0!-Vari%u(Isize+ibeg-1,j) !Vari%Uint/Vari%Uref
-        Vari%u(Isize+ibeg-1,j)=0.d0
-        Vari%v(Isize+ibeg+ight-1,j)=0.d0-Vari%v(Isize+ibeg-1,j) !Vari%Vint/Vari%Uref
-      end do
-      do i = ibeg,Isize+ibeg-1
-      ! Bottom wall non-slip wall
-        Vari%p(i,jbeg-jght)=Vari%p(i,jbeg)
-        Vari%t(i,jbeg-jght)=Vari%t(i,jbeg)
-        Vari%u(i,jbeg-jght)=Vari%u(i,jbeg)
-        Vari%v(i,jbeg-jght)=0.d0 !Vari%Vint/Vari%Uref
-      ! Open air
-        Vari%p(i,Jsize+jbeg+jght-1)=0.d0
-        Vari%t(i,jbeg+Jsize+jght-1)=Vari%t(i,jbeg+Jsize-1)
-        Vari%u(i,Jsize+jbeg+jght-1)=Vari%u(i,Jsize+jbeg-1)
-     !   Vari%v(i,Jsize+jbeg-1) = Vari%v(i,Jsize+jbeg-2)
-     !   Vari%v(i,Jsize+jbeg+jght-1) = Vari%v(i,Jsize+jbeg-1)
-      end do
-    END SUBROUTINE WaveBoundaryCondition
+!    SUBROUTINE WaveBoundaryCondition(PGrid,Vari,Time)
+!      TYPE(Grid),INTENT(IN):: PGrid
+!      TYPE(Variables),INTENT(INOUT):: Vari
+!      TYPE(SolverTime),INTENT(IN):: Time
+!      INTEGER(kind=it8b):: i,j
+!      REAL(KIND=dp):: etau,etav
+!      etau=amp0*dsin(2.d0*pi/Lamdaw*(-cw0*Time%NondiT))
+!      etav=amp0*dsin(2.d0*pi/Lamdaw*(-PGrid%dx(1,1)/2.d0-cw0*Time%NondiT))
+!      do j=jbeg,Jsize+jbeg-1
+!      ! Left inlet wall
+!        Vari%p(ibeg-ight,j)=Vari%p(ibeg,j) !Vari%Pint/(Vari%Pref)
+!        Vari%t(ibeg-ight,j)=Vari%t(ibeg,j)
+!        if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Hw+etau) then
+!        ! for water entry velocity
+!          Vari%u(ibeg-ight,j)=2.d0*pi/Lamdaw*cw0*etau*                         &
+!                 dcosh(2.d0*pi*PGrid%y(1,j))/dsinh(2.d0*pi*Hw)
+!        else
+!        ! for gas entry velocity
+!          Vari%u(ibeg-ight,j)=-2.d0*pi/Lamdaw*cw0*etau*                        &
+!                 dcosh(2.d0*pi*(HChannel-PGrid%y(1,j)))/dsinh(2.d0*pi*Ha)
+!        end if
+!        if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Hw+etav) then
+!          Vari%v(ibeg-ight,j)=-Amp0*2.d0*pi/cw0*                               &
+!                dcos(2.d0*pi/Lamdaw*(-PGrid%dx(1,1)/2.d0-cw0*Time%NondiT))*    &
+!                dsinh(2.d0*pi*PGrid%y(1,j))/dsinh(2.d0*pi*Hw)
+!        else
+!          Vari%v(ibeg-ight,j)=Amp0*2.d0*pi/cw0*                                &
+!                dcos(2.d0*pi/Lamdaw*(-PGrid%dx(1,1)/2.d0-cw0*Time%NondiT))*    &
+!                dsinh(2.d0*pi*(HChannel-PGrid%y(1,j)))/dsinh(2.d0*pi*Ha)
+!        end if
+!      ! Right Wall non-Slip wall
+!        Vari%p(Isize+ibeg+ight-1,j)=Vari%p(Isize+ibeg-1,j)
+!        Vari%t(Isize+ibeg+ight-1,j)=Vari%t(ibeg+Isize-1,j)
+!        Vari%u(Isize+ibeg+ight-1,j)=0.d0!-Vari%u(Isize+ibeg-1,j) !Vari%Uint/Vari%Uref
+!        Vari%u(Isize+ibeg-1,j)=0.d0
+!        Vari%v(Isize+ibeg+ight-1,j)=0.d0-Vari%v(Isize+ibeg-1,j) !Vari%Vint/Vari%Uref
+!      end do
+!      do i = ibeg,Isize+ibeg-1
+!      ! Bottom wall non-slip wall
+!        Vari%p(i,jbeg-jght)=Vari%p(i,jbeg)
+!        Vari%t(i,jbeg-jght)=Vari%t(i,jbeg)
+!        Vari%u(i,jbeg-jght)=Vari%u(i,jbeg)
+!        Vari%v(i,jbeg-jght)=0.d0 !Vari%Vint/Vari%Uref
+!      ! Open air
+!        Vari%p(i,Jsize+jbeg+jght-1)=0.d0
+!        Vari%t(i,jbeg+Jsize+jght-1)=Vari%t(i,jbeg+Jsize-1)
+!        Vari%u(i,Jsize+jbeg+jght-1)=Vari%u(i,Jsize+jbeg-1)
+!     !   Vari%v(i,Jsize+jbeg-1) = Vari%v(i,Jsize+jbeg-2)
+!     !   Vari%v(i,Jsize+jbeg+jght-1) = Vari%v(i,Jsize+jbeg-1)
+!      end do
+!    END SUBROUTINE WaveBoundaryCondition
 END MODULE Solver

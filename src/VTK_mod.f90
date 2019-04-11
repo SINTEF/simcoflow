@@ -366,7 +366,7 @@ module vtk
            action="write", iostat=err)
         if(err /= 0) print '("VTK_collect_file: Error, problem creating file ",a,".")', trim(f)
         write(unit=fd%unit,fmt='(100A)')   '<?xml version="1.0"?>'
-        write(unit=fd%unit,fmt='(100A)')   '<VTKFile TYPE="Collection" version="0.1" format="ascii">'
+        write(unit=fd%unit,fmt='(100A)')   '<VTKFile type="Collection" version="0.1" format="ascii">'
         write(unit=fd%unit,fmt='(100A)')   '  <Collection>'
         nt=len_trim(fd%prefix)
         np=scan(STRING=fd%prefix, SET="/", BACK=.true.)

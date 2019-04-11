@@ -50,7 +50,8 @@ Module ProjectionP
       call ComputePossionMatrixCoefficient(PGrid,UGrid,VGrid,PCell,UCell,      &
                                                              VCell,PU,PV)
       call SetBasicSolver(solver,precond)
-    !    call SetBasicSolver(solver=solver,ierr=ierr)
+!     call SetBasicSolver(solver=solver,ierr=ierr)
+!     WB,EB,SB,NB
       call SetPoissonMatrix(A,parcsr_A,PGrid,PCell,1,1,1,0,matr,itt)
       call SetPoissonVectors(b,x,par_b,par_x,PGrid,PCellO,PCell,vb,dt,rhm,itt)
       call HYPRE_ParCSRPCGSetup(solver,parcsr_A,par_b,par_x,ierr)
@@ -60,7 +61,7 @@ Module ProjectionP
       call HYPRE_ParCSRPCGGetFinalRelative(solver,final_res_norm,ierr)
 !     call HYPRE_ParCSRPCGGetResidual(solver,tol,ierr)
       call DeltaPressureGetValues(x,PCell,Proj)
-      call DeltaPressureBoundaryCondition(Proj,1,0,1,0)
+      call DeltaPressureBoundaryCondition(Proj,1,1,1,0)
       call HYPRE_IJMatrixDestroy(A,ierr)
       call HYPRE_IJVectorDestroy(b,ierr)
       call HYPRE_IJVectorDestroy(x,ierr)
@@ -86,7 +87,7 @@ Module ProjectionP
             print*,'Problem start'
             print*,resi,rhm(i,j),dabs(resi-rhm(i,j))
             print*,i,j
-            pause 'ProjectionP_86'
+            pause'ProjectionP_86'
           end if
         end do
       end do
@@ -142,9 +143,9 @@ Module ProjectionP
                                                     ! south face, north face, 0: Dirichlet, 1: Neumann
       INTEGER(kind=it8b),INTENT(IN):: itt
       INTEGER(kind=it4b):: nnz,ictr,ilower,iupper,cols(0:4)
-      INTEGER(kind=it4b):: i,j
+      INTEGER(kind=it4b):: i,j,ii,jj
       REAL(KIND=dp):: values(0:4)
-      REAL(KIND=dp):: dx,dy,test,nesu,diag,tol
+      REAL(KIND=dp):: dx,dy,test,nesu,diag,tol,mindiag
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: matr
       ilower = 0
       iupper = PCell%ExtCell
@@ -162,6 +163,7 @@ Module ProjectionP
 !
 !     Note that here we are setting one row at a time, though
 !     one could set all the rows together (see the User's Manual).
+!      mindiag=1.d10
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           if(PCell%Posnu(i,j)/=-1) then
@@ -225,6 +227,11 @@ Module ProjectionP
             values(nnz)=values(nnz)+dsign(1.d0,values(nnz))*tol
             diag=dabs(values(nnz))
             matr(i,j,3)=values(nnz)
+!            if(mindiag>dabs(values(nnz))) then
+!              ii=i
+!              jj=j
+!              mindiag=dabs(values(nnz))
+!            end if
             nnz=nnz+1
             ! East of current cell
             if(i<ibeg+Isize-1) then
@@ -247,9 +254,20 @@ Module ProjectionP
               end if
             end if
             call HYPRE_IJMatrixSetValues(A,1,nnz,ictr,cols,values,ierr)
+!            if(i==299.and.(j==76.or.j==77)) then
+!              print*,i,j
+!              print*,PCell%vofS(i,j)
+!              print*,PCell%SEdge_ARea(i,j),PCell%NEdge_Area(i,j)
+!              print*,PCell%WEdge_Area(i,j),PCell%EEdge_Area(i,j)
+!              print*,
+!            end if
           end if
         end do
       end do
+!      print*,'*************************_End test Projection'
+!      print*,ii,jj
+!      print*,mindiag
+!      print*,'----------------------'
       call HYPRE_IJMatrixAssemble(A,ierr)
       call HYPRE_IJMatrixGetObject(A,parcsr_A,ierr)
     end subroutine SetPoissonMatrix
@@ -261,9 +279,9 @@ Module ProjectionP
         REAL(KIND=dp),INTENT(IN):: vb
         REAL(KIND=dp),INTENT(IN):: dt
         INTEGER(kind=it8b),INTENT(IN):: itt
-        INTEGER(kind=it4b):: i,j
+        INTEGER(kind=it4b):: i,j,ii,jj
         INTEGER:: ilower,iupper,ictr,local_size
-        REAL(KIND=dp):: dx,dy,beta(2)
+        REAL(KIND=dp):: dx,dy,beta(2),maxvect
         INTEGER(kind=it4b),DIMENSION(:),allocatable:: rows
         REAL(KIND=dp),DIMENSION(:),allocatable:: rhs,xval
         REAL(KIND=dp),DIMENSION(:,:),allocatable:: ExtFlux,rhm
@@ -284,6 +302,7 @@ Module ProjectionP
         call HYPRE_IJVectorSetObjectTYPE(x,HYPRE_PARCSR,ierr)
         call HYPRE_IJVectorInitialize(x,ierr)
         ExtFlux(:,:) = 0.d0
+!        maxvect=0.d0
         do i = ibeg,ibeg+Isize-1
           do j = jbeg,jbeg+Jsize-1
             ictr=PCell%PosNu(i,j)
@@ -297,13 +316,6 @@ Module ProjectionP
                           v(i,j-1)*PCell%SEdge_Area(i,j))*dx                   &
                          +vb*PCell%nyS(i,j)*PCell%WlLh(i,j)
                       ! -((1.d0-PCell%vofS(i,j))-(1.d0-PCellO%vofS(i,j)))*dx*dy
-              if(PCell%VofS(i,j)>-epsi.and.PCell%vofS(i,j)<epsi.and.j<Jsize) then
-                if(PCell%vofS(i,j+1)<1.d0+epsi.and.PCell%vofS(i,j+1)>1.d0-epsi) then
-                  rhs(ictr)=rhs(ictr)+vb*(-1.d0)*dx
-                  print*,'inside projection step'
-                  print*,vb,PCell%nyS(i,j),PCell%WlLh(i,j)
-                end if
-              end if
               xval(ictr)=0.d0
               rows(ictr)=ilower+ictr
               rhm(i,j)=rhs(ictr)
@@ -311,6 +323,11 @@ Module ProjectionP
                 print*,u(i,j),u(i-1,j),v(i,j),v(i,j-1),i,j
                 pause 'bugs, projection 476'
               endif
+!              if(maxvect<dabs(rhs(ictr))) then
+!                maxvect=dabs(rhs(ictr))
+!                ii=i
+!                jj=j
+!              end if
             !  if(i==294.and.j==190) then
             !    print*,i,j
             !    print*,vb,PCell%nyS(i,j),PCell%WlLh(i,j)
@@ -319,6 +336,10 @@ Module ProjectionP
             endif
           end do
         end do
+!        print*,'oooooooooooooooooo'
+!        print*,maxvect
+!        print*,ii,jj
+!        print*,'iiiiiiiii_Test vector'
         call HYPRE_IJVectorSetValues(b,local_size,rows,rhs,ierr)
         call HYPRE_IJVectorSetValues(x,local_size,rows,xval,ierr)
         call HYPRE_IJVectorAssemble(b,ierr)

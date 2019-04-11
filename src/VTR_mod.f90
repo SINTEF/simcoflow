@@ -147,7 +147,7 @@ module vtr
       if(err /= 0) print '("Problem creating file ",a,".")', trim(f)
 
     end if
-    write(unit=fd%unit, fmt='(100A)') '<VTKFile TYPE="RectilinearGrid" version="0.1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '<VTKFile type="RectilinearGrid" version="0.1" format="ascii">'
  end subroutine VTR_open_file
 
  subroutine VTR_write_mesh_2d(fd, x, y)
@@ -166,13 +166,13 @@ module vtr
     write(unit=fd%unit, fmt='(100A)') '  <Piece Extent="1 '//trim(adjustl(buf1))//' 1 '//&
                                 &trim(adjustl(buf2))//' 1 1 '//'">'
     write(unit=fd%unit, fmt='(100A)') '   <Coordinates>'
-    write(unit=fd%unit, fmt='(100A)') '    <DataArray TYPE="Float32" Name="X_COORDINATES" NumberOfComponents="1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '    <DataArray type="Float32" Name="X_COORDINATES" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit, fmt=*) real(x(1:fd%ni),kind=s)
     write(unit=fd%unit, fmt='(100A)') '    </DataArray>'
-    write(unit=fd%unit, fmt='(100A)') '    <DataArray TYPE="Float32" Name="Y_COORDINATES" NumberOfComponents="1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '    <DataArray type="Float32" Name="Y_COORDINATES" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit, fmt=*) real(y(1:fd%nj),kind=s)
     write(unit=fd%unit, fmt='(100A)') '    </DataArray>'
-    write(unit=fd%unit, fmt='(100A)') '    <DataArray TYPE="Float32" Name="Z_COORDINATES" NumberOfComponents="1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '    <DataArray type="Float32" Name="Z_COORDINATES" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit, fmt=*) real(0.0_d,kind=s)
     write(unit=fd%unit, fmt='(100A)') '    </DataArray>'
     write(unit=fd%unit, fmt='(100A)') '   </Coordinates>'
@@ -196,13 +196,13 @@ module vtr
     write(unit=fd%unit, fmt='(100A)') '  <Piece Extent="1 '//trim(adjustl(buf1))//' 1 '//&
                                 &trim(adjustl(buf2))//' 1 '//trim(adjustl(buf3))//'">'
     write(unit=fd%unit, fmt='(100A)') '   <Coordinates>'
-    write(unit=fd%unit, fmt='(100A)') '    <DataArray TYPE="Float32" Name="X_COORDINATES" NumberOfComponents="1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '    <DataArray type="Float32" Name="X_COORDINATES" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit, fmt=*) real(x(1:fd%ni),kind=s)
     write(unit=fd%unit, fmt='(100A)') '    </DataArray>'
-    write(unit=fd%unit, fmt='(100A)') '    <DataArray TYPE="Float32" Name="Y_COORDINATES" NumberOfComponents="1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '    <DataArray type="Float32" Name="Y_COORDINATES" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit, fmt=*) real(y(1:fd%nj),kind=s)
     write(unit=fd%unit, fmt='(100A)') '    </DataArray>'
-    write(unit=fd%unit, fmt='(100A)') '    <DataArray TYPE="Float32" Name="Z_COORDINATES" NumberOfComponents="1" format="ascii">'
+    write(unit=fd%unit, fmt='(100A)') '    <DataArray type="Float32" Name="Z_COORDINATES" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit, fmt=*) real(z(1:fd%nk),kind=s)
     write(unit=fd%unit, fmt='(100A)') '    </DataArray>'
     write(unit=fd%unit, fmt='(100A)') '   </Coordinates>'
@@ -241,19 +241,19 @@ module vtr
       end do
     end do
 
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(name))//'" NumberOfComponents="3" format="ascii">'
     write(unit=fd%unit,fmt=*) real(Velocity(:,1:fd%ni,1:fd%nj),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
 
     uname="X_"//name
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(uname))//'" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit,fmt=*) real(velocity(1,1:fd%ni,1:fd%nj),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
 
     vname="Y_"//name
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(vname))//'" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit,fmt=*) real(velocity(2,1:fd%ni,1:fd%nj),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
@@ -301,25 +301,25 @@ module vtr
       end do
     end do
 
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(name))//'" NumberOfComponents="3" format="ascii">'
     write(unit=fd%unit,fmt=*) real(Velocity(:,1:fd%ni,1:fd%nj,1:fd%nk),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
 
     uname="X_"//name
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(uname))//'" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit,fmt=*) real(velocity(1,1:fd%ni,1:fd%nj,1:fd%nk),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
 
     vname="Y_"//name
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(vname))//'" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit,fmt=*) real(velocity(2,1:fd%ni,1:fd%nj,1:fd%nk),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
 
     wname="Z_"//name
-    write(unit=fd%unit,fmt='(100A)') '        <DataArray TYPE="Float32" Name="'//&
+    write(unit=fd%unit,fmt='(100A)') '        <DataArray type="Float32" Name="'//&
                                &trim(adjustl(wname))//'" NumberOfComponents="1" format="ascii">'
     write(unit=fd%unit,fmt=*) real(velocity(3,1:fd%ni,1:fd%nj,1:fd%nk),kind=s)
     write(unit=fd%unit,fmt='(100A)') '        </DataArray>'
@@ -337,7 +337,7 @@ module vtr
     if ((size(field,dim=1) /= fd%ni) .or. &
         (size(field,dim=2) /= fd%nj)) call handle_warning("VTR_write_var","Incompatible FIELD and MESH sizes.")
 
-      write(unit=fd%unit,fmt='(100A)') '         <DataArray TYPE="Float32" Name="'//&
+      write(unit=fd%unit,fmt='(100A)') '         <DataArray type="Float32" Name="'//&
                                  &trim(adjustl(name))//'" NumberOfComponents="1" format="ascii">'
       write(unit=fd%unit,fmt=*) real(field(1:fd%ni,1:fd%nj),kind=s)
       write(unit=fd%unit,fmt='(100A)') '         </DataArray>'
@@ -354,7 +354,7 @@ module vtr
         (size(field,dim=2) /= fd%nj) .or. &
         (size(field,dim=3) /= fd%nk)) call handle_warning("VTR_write_var","Incompatible FIELD and MESH sizes.")
 
-      write(unit=fd%unit,fmt='(100A)') '         <DataArray TYPE="Float32" Name="'//&
+      write(unit=fd%unit,fmt='(100A)') '         <DataArray type="Float32" Name="'//&
                                  &trim(adjustl(name))//'" NumberOfComponents="1" format="ascii">'
       write(unit=fd%unit,fmt=*) real(field(1:fd%ni,1:fd%nj,1:fd%nk),kind=s)
       write(unit=fd%unit,fmt='(100A)') '         </DataArray>'
@@ -403,7 +403,7 @@ module vtr
            action="write", iostat=err)
         if(err /= 0) print '("VTR_collect_file: Error, problem creating file ",a,".")', trim(f)
         write(unit=fd%unit,fmt='(100A)')   '<?xml version="1.0"?>'
-        write(unit=fd%unit,fmt='(100A)')   '<VTKFile TYPE="Collection" version="0.1" format="ascii">'
+        write(unit=fd%unit,fmt='(100A)')   '<VTKFile type="Collection" version="0.1" format="ascii">'
         write(unit=fd%unit,fmt='(100A)')   '  <Collection>'
         nt=len_trim(fd%prefix)
         np=scan(STRING=fd%prefix, SET="/", BACK=.true.)

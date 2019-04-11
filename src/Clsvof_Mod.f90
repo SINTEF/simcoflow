@@ -84,7 +84,7 @@ Module Clsvof
             node(temp,1)=TGrid%x(i,j)-dx2+TGrid%dx(i,j)*dabs(dpt(2))/          &
                                           (dabs(dpt(2))+dabs(dpt(1)))
             tol=1.d0
-            do while(tol>1.d-13)
+            do while(tol>1.d-12)
               fx=TGrid%y(i,j)-dy2-(Depthw+Amp0*dsin(kw*(node(temp,1))))
               dfx=-Amp0*kw*dcos(kw*(node(temp,1)))
               tol=dabs(fx/dfx)
@@ -804,10 +804,12 @@ Module Clsvof
                                                           UpdateNorVec,NondiT,k)
            do i = 1,ISize
              do j = 1,JSize
-               temvfx(i,j)=temvfx(i,j)/(1.d0-dtv/PGrid%dx(i,j)*                &
-                    (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j)))
-               temlsx(i,j)=temlsx(i,j)/(1.d0-dtv/PGrid%dx(i,j)*                &
-                    (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j)))
+               temvfx(i,j)=temvfx(i,j)/((1.d0-PCell%vofS(i,j)+tolDeno)-        &
+                           dtv/PGrid%dx(i,j)*(ue(i,j)*PCell%EEdge_Area(i,j)-   &
+                           ue(i-1,j)*PCell%WEdge_Area(i,j)))
+               temlsx(i,j)=temlsx(i,j)/((1.d0-PCell%vofS(i,j)+tolDeno)-        &
+                           dtv/PGrid%dx(i,j)*(ue(i,j)*PCell%EEdge_Area(i,j)-   &
+                           ue(i-1,j)*PCell%WEdge_Area(i,j)))
                vfl(i,j)=temvfx(i,j)*(1.d0-vflS(i,j))
                phi(i,j)=temlsx(i,j)
                if(vfl(i,j)>=1.d0-vofeps-vfls(i,j)) vfl(i,j)=1.d0-vfls(i,j)
@@ -818,18 +820,10 @@ Module Clsvof
                  print*,'clsvof_823'
                  print*,i,j
                end if
-           !    if(itt==3.and.i==1.and.j==149) then
-           !      print*,itt,k
-           !      print*,temvfx(i,j),temvfx(i,j)*(1.d0-dtv/PGrid%dx(i,j)*        &
-           !         (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j)))
-           !      print*,ue(i,j),ue(i-1,j)
-           !      print*,(1.d0-dtv/PGrid%dx(i,j)*                                &
-           !         (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j)))
-           !      print*,vfl(i,j)
-           !      print*,
-          !     end if
              end do
            end do
+           call Boundary_Condition(vfl)
+           call Boundary_Condition(phi)
        !    call Boundary_Condition_Vof_Phi(PGrid,NondiT+dble(k)*dtv)
            temvfy(:,:) = vfl(:,:)
            temlsy(:,:) = phi(:,:)
@@ -839,37 +833,15 @@ Module Clsvof
            do i = 1,ISize
              do j = 1,JSize
                temvfy(i,j)=temvfy(i,j)+dtv/PGrid%dy(i,j)*temvfx(i,j)*          &
-                (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j))!&
-                ! -temvfx(i,j)*vb*dtv*PCell%nyS(i,j)*PCell%WlLh(i,j)/           &
-                !  PGrid%dx(i,j)/PGrid%dy(i,j)
+                (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j))
+
                temlsy(i,j)=temlsy(i,j)+dtv/PGrid%dy(i,j)*temlsx(i,j)*          &
-                (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j))!&
-                ! -temlsx(i,j)*vb*dtv*PCell%nyS(i,j)*PCell%WlLh(i,j)/           &
-                !  PGrid%dx(i,j)/PGrid%dy(i,j)
+                (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j))
           !    Correction for mass error conservation(Mark Sussmann JCP 221(2007) 469-505)
-               vfl(i,j)=temvfy(i,j)*(1.d0-vflS(i,j))
-               phi(i,j)=temlsy(i,j)
-         !      vfl(i,j)=(temvfy(i,j)-temvfx(i,j)*dtv*                          &
-         !!                          ((ue(i,j)*PCell%EEdge_Area(i,j)-            &
-         !                            ue(i-1,j)*PCell%WEdge_Area(i,j))/         &
-         !             PGrid%dx(i,j)+(ve(i,j)*PCell%NEdge_Area(i,j)-            &
-         !             ve(i,j-1)*PCell%SEdge_Area(i,j))/PGrid%dy(i,j)))*(1.d0-vflS(i,j))
-         !      phi(i,j)=temlsy(i,j)-temlsx(i,j)*dtv*                           &
-         !                          ((ue(i,j)*PCell%EEdge_Area(i,j)-            &
-         !                            ue(i-1,j)*PCell%WEdge_Area(i,j))/         &
-         !             PGrid%dx(i,j)+(ve(i,j)*PCell%NEdge_Area(i,j)-            &
-         !             ve(i,j-1)*PCell%SEdge_Area(i,j))/PGrid%dy(i,j))
-          !     if(vfl(i,j)>=1.d0-vofeps-vfls(i,j)) vfl(i,j)=1.d0-vfls(i,j)
-          !     if(vfl(i,j)<vofeps) vfl(i,j) = 0.d0
-          !     if(itt==361.and.(i==2.or.i==3).and.(j==155.or.j==156.or.j==157.or.j==158.or.j==159)) then
-         !      end if
-            !   if(itt==3.and.i==1.and.j==149) then
-            !     print*,itt,k
-            !     print*,temvfy(i,j),temvfy(i,j)-dtv/PGrid%dy(i,j)*temvfx(i,j)*          &
-            !    (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j))
-            !     print*,vfl(i,j)
-            !     print*,
-            !   end if
+               vfl(i,j)=temvfy(i,j)!*(1.d0-vflS(i,j))
+               if(PCell%vofS(i,j)<1.d0-epsi) then
+                 phi(i,j)=temlsy(i,j)/(1.d0-PCell%vofS(i,j))
+               end if
                if(isnan(vfl(i,j))) then
                  print*,'what the fuck'
                  print*,temvfx(i,j),temvfy(i,j)
@@ -886,24 +858,16 @@ Module Clsvof
                                                                    UpdateNorVec)
            do i = 1,ISize
              do j = 1,JSize
-               temvfy(i,j)=temvfy(i,j)/(1.d0-dtv/PGrid%dy(i,j)*                &
-                 (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j)))
-               temlsy(i,j)=temlsy(i,j)/(1.d0-dtv/PGrid%dy(i,j)*                &
-                 (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j)))
+               temvfy(i,j)=temvfy(i,j)/((1.d0-PCell%vofS(i,j)+TolDeno)-        &
+                           dtv/PGrid%dy(i,j)*(ve(i,j)*PCell%NEdge_Area(i,j)-   &
+                           ve(i,j-1)*PCell%SEdge_Area(i,j)))
+               temlsy(i,j)=temlsy(i,j)/((1.d0-PCell%vofS(i,j)+TolDeno)-        &
+                           dtv/PGrid%dy(i,j)*(ve(i,j)*PCell%NEdge_Area(i,j)-   &
+                           ve(i,j-1)*PCell%SEdge_Area(i,j)))
                vfl(i,j)=temvfy(i,j)*(1.d0-vflS(i,j))
                phi(i,j)=temlsy(i,j)
                if(vfl(i,j)>=1.d0-vofeps-vfls(i,j)) vfl(i,j)=1.d0-vfls(i,j)
                if(vfl(i,j)<vofeps) vfl(i,j)=0.d0
-            !   if(itt==45.and.i==299.and.(j==123.or.j==124)) then
-            !     print*,'test Y-Y'
-            !     print*,k
-            !     print*,i,j
-            !     print*,temvfx(i,j),temvfy(i,j)
-            !     print*,vfl(i,j)
-            !     print*,ve(i,j),PCell%NEdge_Area(i,j)
-            !     print*,ve(i,j-1),PCell%SEdge_Area(i,j)
-            !    print*,
-            !   end if
                if(isnan(vfl(i,j))) then
                  print*,'what the fuck'
                  print*,temvfx(i,j),temvfy(i,j)
@@ -912,6 +876,8 @@ Module Clsvof
                end if
              end do
            end do
+           call Boundary_Condition(vfl)
+           call Boundary_Condition(phi)
        !    call Boundary_Condition_Vof_Phi(PGrid,NondiT+dble(k)*dtv)
            temvfx(:,:) = vfl(:,:)
            temlsx(:,:) = phi(:,:)
@@ -921,16 +887,14 @@ Module Clsvof
            do i = 1,ISize
              do j = 1,JSize
                temvfx(i,j)=temvfx(i,j)+dtv/PGrid%dx(i,j)*temvfy(i,j)*          &
-                (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j))!& ! By using the FVM the contribution of wall movement including in the transport equation
-          !      -temvfy(i,j)*vb*dtv*PCell%nyS(i,j)*PCell%WlLh(i,j)/            &
-          !       PGrid%dx(i,j)/PGrid%dy(i,j)
+                (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j))
                temlsx(i,j)=temlsx(i,j)+dtv/PGrid%dx(i,j)*temlsy(i,j)*          &
-                (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j))!&
-         !       -temlsy(i,j)*vb*dtv*PCell%nyS(i,j)*PCell%WlLh(i,j)/            &
-         !        PGrid%dx(i,j)/PGrid%dy(i,j)
+                (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j))
          ! Additional step to maintain mass conservation
-               vfl(i,j)=temvfx(i,j)*(1.d0-vflS(i,j))
-               phi(i,j)=temlsx(i,j)
+               vfl(i,j)=temvfx(i,j)!*(1.d0-vflS(i,j))
+               if(PCell%vofS(i,j)<1.d0-epsi) then
+                 phi(i,j)=temlsx(i,j)/(1.d0-PCell%vofS(i,j))
+               end if
          !      vfl(i,j)=(temvfx(i,j)-temvfy(i,j)*dtv*                          &
          !                          ((ue(i,j)*PCell%EEdge_Area(i,j)-            &
          !                            ue(i-1,j)*PCell%WEdge_Area(i,j))/         &
@@ -962,183 +926,7 @@ Module Clsvof
        ! the outputs are interface normal vector and a distance from cell center to interface
        ! Redistribute the volume of fluid to neighbor cells
        ! For j=1
-         do i = 2,Isize-1
-           if(vfl(i,1)>=1.d0-vfls(i,1)+vofeps) then
-             sumvol=0.d0
-             tempc=1
-             weight=0.d0
-             do ii=-1,1
-               do jj=0,1
-                 weight(tempc)=dmin1(ResVol,dmax1(0.d0,1.d0-vfls(i+ii,1+jj)-   &
-                    vfl(i+ii,1+jj)))*(2.d0-dabs(dble(ii))-dabs(dble(jj))+      &
-                    vfls(i+ii,1+jj)/(vfls(i+ii,1+jj)+1.d-15)*1.d-5)
-                 tempc=tempc+1
-               end do
-             end do
-             sumweight=sum(weight)+1.d-20-weight(3)
-             weight(3)=0.d0
-             voldif=(vfl(i,1)+vfls(i,1)-1.d0)
-             tempc=1
-             do ii=-1,1
-               do jj=0,1
-                 neighvol=voldif*weight(tempc)/sumweight
-                 sumvol=sumvol+neighvol
-                 vfl(i+ii,1+jj)=vfl(i+ii,1+jj)+neighvol
-                 tempc=tempc+1
-               end do
-             end do
-             vfl(i,1)=vfl(i,1)-sumvol
-           end if
-         end do
 
-         do j = 2,Jsize-1
-           do i = 2,Isize-1
-             if(vfl(i,j)>=1.d0-vfls(i,j)+vofeps) then
-               sumvol=0.d0
-               tempc=1
-               do ii=-1,1
-                 do jj=-1,1
-                   weight(tempc)=dmin1(ResVol,dmax1(0.d0,1.d0-vfls(i+ii,j+jj)- &
-                     vfl(i+ii,j+jj)))*(2.d0-dabs(dble(ii))-dabs(dble(jj))+     &
-                     vfls(i+ii,j+jj)/(vfls(i+ii,j+jj)+1.d-15)*1.d-5)
-                   tempc=tempc+1
-                 end do
-               end do
-             ! Flux out to neighbor cell
-               sumweight=sum(weight)+1.d-20-weight(5)
-               weight(5)=0.d0
-               voldif=(vfl(i,j)+vfls(i,j)-1.d0)
-               tempc=1
-               do ii=-1,1
-                 do jj=-1,1
-                   neighvol=voldif*weight(tempc)/sumweight
-                   sumvol=sumvol+neighvol
-                   vfl(i+ii,j+jj)=vfl(i+ii,j+jj)+neighvol
-                   tempc=tempc+1
-                 end do
-               end do
-               vfl(i,j)=vfl(i,j)-sumvol
-             end if
-           end do
-         end do
-
-        ! Calculate the residual of vfl in cells that excess 1.d0-vfls
-        ! Calculate the deficit of vfl in cells that is smaller than 1.d0-vfls.
-        ! however, their value should be 1.d0-vfls
-         sumvol=0.d0
-         sumweight=0.d0
-         tempc=1
-         do j = 1,Jsize
-           do i = 1,Isize
-             if(vfl(i,j)>=1.d0-vfls(i,j)+vofeps) then
-            !   if(i==165.and.j==160) then
-            !     print*,vfl(i,j),1.d0-vfls(i,j)+vofeps
-            !     print*,'before test'
-            !   end if
-               sumvol=sumvol+(vfl(i,j)+vfls(i,j)-1.d0)
-               vfl(i,j)=1.d0-vfls(i,j)
-            !   if(i==165.and.j==160) then
-            !     print*,vfl(i,j),1.d0-vfls(i,j)+vofeps
-            !     print*,'after test'
-            !   end if
-             end if
-             if(vfl(i,j)<=1.d0-vfls(i,j)-vofeps.and.vfls(i,j)>epsi.and.        &
-                vfl(i,j)/(1.d0-vfls(i,j))>=1.d0-vfl(i,j)*                      &
-                dabs(dttol*((ue(i,j)-ue(i-1,j))/PGrid%dx(i,j)+                 &
-                (ve(i,j)-ve(i,j-1))/PGrid%dy(i,j)))/(1.d0-vfls(i,j))) then
-               sumweight=sumweight+(1.d0-vfl(i,j)-vfls(i,j))
-             end if
-           end do
-         end do
-
-         do j = 2,Jsize-1
-           do i = 2,Isize-1
-             if(vfl(i,j)<=1.d0-vofeps.and.vfls(i,j)<epsi.and.                  &
-                vfl(i,j)>=1.d0-1.d-4.and.                                      &
-               (vfls(i-1,j)>epsi.or.vfls(i+1,j)>epsi.or.                       &
-                vfls(i,j-1)>epsi.or.vfls(i,j+1)>epsi)) then
-               sumweight=sumweight+(1.d0-vfl(i,j))
-             end if
-           end do
-         end do
-         tempc=1
-         ! If the residual of vfl in cells that excess 1.d0-vfls, is smaller
-         ! than deficit of vfl in cells that need a 'treatment',
-         ! more vfl from interface cell will contribute to this residual
-         if(sumvol-sumweight<-vofeps) then
-           voldif=sumweight-sumvol
-           sumweight2=0.d0
-           do j = 1,Jsize
-             do i = 1,Isize
-               if(vfl(i,j)<=0.6d0.and.vfls(i,j)<epsi.and.vfl(i,j)>0.4d0) then
-                 sumweight2=sumweight2+(vfl(i,j)-0.5d0)
-               end if
-             end do
-           end do
-           do j = 1,Jsize
-             do i = 1,Isize
-               if(vfl(i,j)<=0.6d0.and.vfls(i,j)<epsi.and.vfl(i,j)>0.4d0) then
-                 vfl(i,j)=vfl(i,j)-voldif*(vfl(i,j)-0.5d0)/sumweight2
-               end if
-             end do
-           end do
-           sumvol=sumvol+voldif
-         end if
-         ! Adding volume fraction of fluid to the cells that should contain only fluid
-         ! However, numerical error create  small gas volume fraction inside this cell
-         ! due to the VFLGas = 1.d0-vfl-vfls
-         SumAllVolBig=0.d0
-         SumAllVolSmall=0.d0
-         do j = 2,Jsize-1
-           do i = 2,Isize-1
-             if(vfl(i,j)<=1.d0-vofeps.and.vfls(i,j)<epsi.and.                  &
-               vfl(i,j)>=1.d0-1.d-4.and.                                       &
-               (vfls(i-1,j)>epsi.or.vfls(i+1,j)>epsi.or.                       &
-                vfls(i,j-1)>epsi.or.vfls(i,j+1)>epsi)) then
-               voldif=sumvol*(1.d0-vfl(i,j))/sumweight
-               vfl(i,j)=vfl(i,j)+voldif
-             end if
-           end do
-         end do
-         do j = 1,Jsize
-           do i = 1,Isize
-             if(vfl(i,j)<=1.d0-vfls(i,j)-vofeps.and.vfls(i,j)>epsi.and.        &
-                vfl(i,j)/(1.d0-vfls(i,j))>=1.d0-vfl(i,j)*                      &
-                dabs(dttol*((ue(i,j)-ue(i-1,j))/PGrid%dx(i,j)+                 &
-               (ve(i,j)-ve(i,j-1))/PGrid%dy(i,j)))/(1.d0-vfls(i,j))) then
-               voldif=sumvol*(1.d0-vfl(i,j)-vfls(i,j))/sumweight
-               vfl(i,j)=vfl(i,j)+voldif
-             end if
-             if(vfl(i,j)>=1.d0-vfls(i,j)-vofeps) then
-               SumAllVolBig=SumAllVolBig+(vfl(i,j)-1.d0+vofeps+vfls(i,j))
-               vfl(i,j)=1.d0-vfls(i,j)
-             end if
-             if(vfl(i,j)<vofeps) then
-               SumAllVolSmall=SumAllVolSmall+vofeps-vfl(i,j)
-               vfl(i,j)=0.d0
-             end if
-           end do
-         end do
-         sumweight2=0.d0
-         voldif=SumAllVolBig-SumAllVolSmall
-         do j = 1,Jsize
-           do i = 1,Isize
-             if(vfl(i,j)<=1.d0-vfls(i,j)-1.d-5.and.vfls(i,j)<epsi.and.         &
-                                                  vfl(i,j)>0.5d0) then
-               sumweight2=sumweight2+(vfl(i,j)-0.5d0)
-             end if
-           end do
-         end do
-         do j = 1,Jsize
-           do i = 1,Isize
-             if(vfl(i,j)<=1.d0-vfls(i,j)-1.d-5.and.vfls(i,j)<epsi.and.         &
-                                                  vfl(i,j)>0.5d0) then
-               vfl(i,j)=vfl(i,j)+voldif*(vfl(i,j)-0.5d0)/sumweight2
-             end if
-             if(vfl(i,j)>=1.d0-vfls(i,j)-vofeps) vfl(i,j)=1.d0-vfls(i,j)
-             if(vfl(i,j)<vofeps) vfl(i,j)=0.d0
-           end do
-         end do
          UpdateNorVec=1
          call Interface_Reconstruct(PGrid,nx,ny,dis,UpdateNorVec)
          PCell%nx(:,:) = nx(:,:)
@@ -1148,7 +936,7 @@ Module Clsvof
            do j=1,Jsize
              if(isnan(phi(i,j))) then
                print*,i,j
-               print*,'after resistance'
+               print*,'after resdistance'
              end if
            end do
          end do
@@ -1253,9 +1041,12 @@ Module Clsvof
                Flux=vfl(i,j)*ue(i,j)*dtv
              end if
            end if
+           ! this may cause a problem when the solid object move to the boundary
+           ! when i=1 temvf(1,j) = 1 instead of (1-vfls)
            if(i>=1)temvf(i,j)=temvf(i,j)-flux*PCell%EEdge_Area(i,j)/PGrid%dx(i,j)
            if(i<=ISize-1) then
-             temvf(i+1,j)=temvf(i+1,j)+flux*PCell%WEdge_Area(i+1,j)/PGrid%dx(i+1,j)
+             temvf(i+1,j)=temvf(i+1,j)*(1.d0-PCell%vofS(i+1,j))+               &
+                                    flux*PCell%WEdge_Area(i+1,j)/PGrid%dx(i+1,j)
            end if
            if(isnan(temvf(i,j))) then
              print*,flux
@@ -1266,7 +1057,7 @@ Module Clsvof
          etau=amp0*dsin(kw*xwu-omew*(NondiT+dble(k)*dtv))
      !    UwInlet-Amp0*kw*(UwInlet-cw0)*                   &
      !               dsin(kw*(xwu-cw0*Time))*dcosh(kw*PGrid%y(1,j))/dsinh(kw*Hw)
-         if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Hw+etau) then
+         if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Depthw+etau) then
            ul1=ue(0,j)!kw*cw0*etau*dcosh(kw*PGrid%y(1,j))/dsinh(kw*Hw)!
      !      Flux=dmin1(1.d0,dabs(Hw+etau-(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0))/    &
      !                  PGrid%dy(1,j))*ul1*dtv
@@ -1299,7 +1090,8 @@ Module Clsvof
            flux=ue(i,j)*lsr*dtv
            if(i>=2) temls(i,j)=temls(i,j)-flux*PCell%EEdge_Area(i,j)/PGrid%dx(i,j)
            if(i<=ISize-1) then
-             temls(i+1,j)=temls(i+1,j)+flux*PCell%WEdge_Area(i+1,j)/PGrid%dx(i+1,j)
+             temls(i+1,j)=temls(i+1,j)*(1.d0-PCell%vofS(i+1,j))+                &
+                                        flux*PCell%WEdge_Area(i+1,j)/PGrid%dx(i+1,j)
            end if
          end do
        end do
@@ -1384,19 +1176,15 @@ Module Clsvof
                 flux=vfl(i,j)*ve(i,j)*dtv
              endif
            end if
+           !******************************************************************
+           ! Note: this may cause a trouble when object moving to boundary when i=1
            if(j>=1)temvf(i,j)=temvf(i,j)-flux*PCell%NEdge_Area(i,j)/PGrid%dy(i,j)
            if(j<=JSize-1) then
-             temvf(i,j+1)=temvf(i,j+1)+flux*PCell%SEdge_Area(i,j+1)/PGrid%dy(i,j+1)
+             temvf(i,j+1)=temvf(i,j+1)*(1.d0-PCell%vofS(i,j+1))+               &
+                                 flux*PCell%SEdge_Area(i,j+1)/PGrid%dy(i,j+1)
            end if
-        !   if(itt==45.and.i==299.and.(j==124.or.j==123)) then
-        !     print*,'Inside Y-Sweep'
-        !     print*,flux
-        !     print*,ve(i,j)*dtv
-        !     print*,vfl(i,j+1)+vfls(i,j+1)
-        !     print*,
-        !   end if
          end do
-         temvf(i,1)=temvf(i,1)+VofInlet*ve(i,0)*dtv*PCell%SEdge_Area(i,1)/     &
+         temvf(i,1)=temvf(i,1)+vfl(i,1)*ve(i,0)*dtv*PCell%SEdge_Area(i,1)/     &
                                                                   PGrid%dy(i,1)
        end do
 
@@ -1423,7 +1211,8 @@ Module Clsvof
            flux = lst*ve(i,j)*dtv
            if(j>=2) temls(i,j)=temls(i,j)-flux*PCell%NEdge_Area(i,j)/PGrid%dy(i,j)
            if(j<=JSize-1) then
-             temls(i,j+1)=temls(i,j+1)+flux*PCell%SEdge_Area(i,j+1)/PGrid%dy(i,j+1)
+             temls(i,j+1)=temls(i,j+1)*(1.d0-PCell%vofS(i,j+1))+               &
+                                    flux*PCell%SEdge_Area(i,j+1)/PGrid%dy(i,j+1)
            end if
          end do
        end do
@@ -2672,23 +2461,49 @@ Module Clsvof
       !      Areatemp=Areatemp/(dble(temp)+tolDeno)
             SForce=TVar%p(i,j)*PCell%WlLh(i,j)*PCell%nyS(i,j)
             Areatemp=PCell%WlLh(i,j)
-      !      print*,i,j
-      !      print*,SForce,Areatemp,PCell%vofS(i,j),temp
+!            print*,i,j
+!            print*,SForce,Areatemp,PCell%vofS(i,j),temp
             Clp=Clp+SForce
             testArea=testArea+Areatemp
-            if(temp==0) then
-              print*,'problem with interpolation'
-              print*,i,j
-              print*,PCell%vofS(i,j)
-              print*,
-            end if
+!            if(temp==0) then
+!              print*,'problem with interpolation'
+!              print*,i,j
+!              print*,PCell%vofS(i,j)
+!              print*,
+!            end if
           end if
         end do
       end do
-  !    print*,'clp:',clp,testArea
+!      PRINT*,'TEST FORCE******************************************************'
+!      PRINT*,TVar%p(300,80),TVar%p(301,80)
+!      print*,PCell%nyS(300,80),PCell%WlLh(300,80)
+!      print*,PCell%nyS(300,81),PCell%WlLh(300,81)
+!      print*,'VCell'
+!      print*,VCell%WEdge_Area(300,80),VCell%EEdge_Area(300,80)
+!      print*,VCell%SEdge_Area(300,80),VCell%NEdge_Area(300,80)
+!      print*,VCell%Cell_Cent(300,80,1),VCell%Cell_Cent(300,80,2)
+!      print*,
+!      print*,VCell%WEdge_Area(299,80),VCell%EEdge_Area(299,80)
+!      print*,VCell%SEdge_Area(299,80),VCell%NEdge_Area(299,80)
+!      print*,VCell%Cell_Cent(299,80,1),VCell%Cell_Cent(299,80,2)
+!      print*,
+!      print*,TVar%v(300,80),TVar%v(299,80)
+!      print*,
+!      print*,'End test force**************************************************'
+!      print*,'clp:',clp,testArea
   !   Some problems with bottom cells
       do i=1,Isize
         do j=1,Jsize-1
+          if(PCell%vofS(i,j)<1.d0-epsi.and.PCell%EEdge_ARea(i,j)<epsiF.and.    &
+                                           PCell%WEDge_Area(i,j)<epsiF) then
+            if(PCell%vofS(i,j+1)<1.d0+epsi.and.PCell%vofS(i,j+1)>1.d0-epsi) then
+              Pres=TVar%p(i,j-1)
+              Area=PGrid%dx(i,j)!PCell%WlLh(i,j)
+              TestArea=TestArea+Area
+              nyfp=-1.d0!PCell%nyS(i,j)
+              Clp=Clp+Pres*Area*nyfp-TVar%p(i,j)*Area*nyfp
+            end if
+          end if
           if(PCell%VofS(i,j)>-epsi.and.PCell%vofS(i,j)<epsi) then
             if(PCell%vofS(i,j+1)<1.d0+epsi.and.PCell%vofS(i,j+1)>1.d0-epsi) then
               Pres=TVar%p(i,j)
@@ -2698,23 +2513,25 @@ Module Clsvof
               Clp=Clp+Pres*Area*nyfp
             end if
             ! 0.6d0 is the volume of solid inside a cell containing boom bar
-            if(PCell%vofS(i,j+1)>0.6d0-epsi.and.PCell%vofS(i,j+1)<0.6d0+       &
+            if(ICorProb.eqv..TRUE.) then
+              if(PCell%vofS(i,j+1)>0.6d0-epsi.and.PCell%vofS(i,j+1)<0.6d0+     &
                                                         epsi.and.j<Jsize-1) then
-              if(PCell%vofS(i,j+2)>0.6d0-epsi.and.PCell%vofS(i,j+2)<0.6d0+     &
+                if(PCell%vofS(i,j+2)>0.6d0-epsi.and.PCell%vofS(i,j+2)<0.6d0+   &
                                                                       epsi) then
-                print*,'This is for compute force'
-                print*,'There is problem with corner of boom bar'
-                Pres=TVar%p(i,j)
-                Area=0.6d0*PGrid%dx(i,j)!PCell%WlLh(i,j)
-                TestArea=TestArea+Area
-                nyfp=-1.d0!PCell%nyS(i,j)
-                Clp=Clp+Pres*Area*nyfp
+                  print*,'This is for compute force'
+                  print*,'There is problem with corner of boom bar'
+                  Pres=TVar%p(i,j)
+                  Area=0.6d0*PGrid%dx(i,j)!PCell%WlLh(i,j)
+                  TestArea=TestArea+Area
+                  nyfp=-1.d0!PCell%nyS(i,j)
+                  Clp=Clp+Pres*Area*nyfp
+                end if
               end if
             end if
           end if
         end do
       end do
-  !    print*,'clp 2:',clp,TestArea
+    !  print*,'clp 2:',clp,TestArea
     ! Wall shear stress to calculate the clf
     ! Upper half of cylinder
       clf=0.d0
@@ -2761,9 +2578,9 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause 'ClsVof_2668'
+            pause'ClsVof_2668'
           end if
-     !  For boom cylinder
+     !     For boom cylinder
      !     dx=TGrid%x(i,j)-BoomCase%Posp%x
      !     dy=TGrid%y(i,j)-BoomCase%Posp%y
      !     TCell%phiS(i,j)=(dsqrt(dx**2.d0+dy**2.d0)-BoomCase%Dobj/2.d0)
@@ -2819,15 +2636,15 @@ Module Clsvof
                 /2.d0+dabs(nyy(i,j))*TGrid%dy(i,j)/2.d0+1.d-10)
           end if
           TCell%phiS(i,j)=dis
-          if(i==2999.and.j==1115) then
-            print*,'test cut-cell for PCell inside cylinder'
-            print*,i,j
-            print*,dpt(1),dpt(2)
-            print*,TCell%phiS(i,j)
-            print*,nxx(i,j),nyy(i,j)
-            print*,dsqrt((TGrid%dx(i,j)/2.d0)**2.d0+(TGrid%dy(i,j)/2.d0)**2.d0)
-            print*,
-          end if
+!          if(i==2999.and.j==1115) then
+!            print*,'test cut-cell for PCell inside cylinder'
+!            print*,i,j
+!            print*,dpt(1),dpt(2)
+!            print*,TCell%phiS(i,j)
+!            print*,nxx(i,j),nyy(i,j)
+!            print*,dsqrt((TGrid%dx(i,j)/2.d0)**2.d0+(TGrid%dy(i,j)/2.d0)**2.d0)
+!            print*,
+!          end if
      !  For region at left side of boom
           if(TGrid%x(i,j)<=BoomCase%XBar1) then
      !  For region under boom
@@ -2909,14 +2726,14 @@ Module Clsvof
                   nxx(i,j)=(BoomCase%XBar2-TGrid%x(i,j))/dabs(dpt(2))
                   nyy(i,j)=-(TGrid%y(i,j)-BoomCase%YBar-BoomCase%LBar)/dabs(dpt(2))
                 end if
-                if(i==2999.and.j==1115) then
-                  print*,'test cut-cell for PCell special case'
-                  print*,i,j
-                  print*,dpt(1),dpt(2)
-                  print*,TCell%phiS(i,j)
-                  print*,nxx(i,j),nyy(i,j)
-                  print*,
-                end if
+!                if(i==2999.and.j==1115) then
+!                  print*,'test cut-cell for PCell special case'
+!                  print*,i,j
+!                  print*,dpt(1),dpt(2)
+!                  print*,TCell%phiS(i,j)
+!                  print*,nxx(i,j),nyy(i,j)
+!                  print*,
+!                end if
               end if
             end if
           end if
@@ -2925,11 +2742,23 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause 'ClsVof_2804'
+            pause'ClsVof_2804'
           end if
           call frac(nxx(i,j),nyy(i,j),TCell%phiS(i,j),TGrid%dx(i,j),           &
                                                       TGrid%dy(i,j),vol)
           TCell%vofS(i,j)=vol
+!          if(i==299.and.(j==76.or.j==77)) then
+!            print*,'Clsvof 2934'
+!            print*,i,j
+!            if(allocated(Tcell%MoExCell)) then
+!              print*,'this is Velocity cell'
+!            end if
+!            print*,TCell%phiS(i,j)
+!            print*,TCell%vofS(i,j)
+!            print*,nxx(i,j),nyy(i,j)
+!            print*,
+!          end if
+          ! Correc
           if(TCell%vofS(i,j)<epsi) TCell%vofS(i,j)=0.d0
           if(TCell%vofS(i,j)>=1.d0-epsi) TCell%vofS(i,j)=1.d0
           ! Correct VofS for bottom region of boom
@@ -2966,6 +2795,17 @@ Module Clsvof
               end if
             end if
           end if
+!          if(i==299.and.(j==76.or.j==77)) then
+!            print*,'Clsvof 2970'
+!            print*,i,j
+!            if(allocated(Tcell%MoExCell)) then
+!              print*,'this is Velocity cell'
+!            end if
+!            print*,TCell%phiS(i,j)
+!            print*,TCell%vofS(i,j)
+!            print*,nxx(i,j),nyy(i,j)
+!            print*,
+!          end if
           ! Correct VofS for region containing cylinder and bar
           if(TCell%vofS(i,j)>epsi.and.TCell%vofS(i,j)<1.d0-epsi) then
             if(TGrid%y(i,j)+TGrid%dy(i,j)/2.d0-tolp>BoomCase%Posp%y-CylBar.and. &
@@ -3044,25 +2884,25 @@ Module Clsvof
               end if
             end if
           end if
-          if(i==2999.and.j==1114) then
-            print*,'test inside boom'
-            print*,TCell%phiS(i,j)
-            print*,TCell%vofS(i,j)
-            print*,TCell%nxS(i,j)
-            print*,TCell%nyS(i,j)
-            print*,
-          end if
+!          if(i==2999.and.j==1114) then
+!            print*,'test inside boom'
+!            print*,TCell%phiS(i,j)
+!            print*,TCell%vofS(i,j)
+!            print*,TCell%nxS(i,j)
+!            print*,TCell%nyS(i,j)
+!            print*,
+!          end if
           TCell%nxS(i,j)=nxx(i,j)
           TCell%nyS(i,j)=nyy(i,j)
-          if(i==2999.and.j==1115) then
-            print*,'after inside boom'
-            print*,i,j
-            print*,TCell%phiS(i,j)
-            print*,TCell%vofS(i,j)
-            print*,TCell%nxS(i,j)
-            print*,TCell%nyS(i,j)
-            print*,
-          end if
+!          if(i==2999.and.j==1115) then
+!            print*,'after inside boom'
+!            print*,i,j
+!            print*,TCell%phiS(i,j)
+!            print*,TCell%vofS(i,j)
+!            print*,TCell%nxS(i,j)
+!            print*,TCell%nyS(i,j)
+!            print*,
+!          end if
           if(TCell%vofS(i,j)<epsi) TCell%vofS(i,j)=0.d0
           if(TCell%vofS(i,j)>=1.d0-epsi) TCell%vofS(i,j)=1.d0
           if((TCell%Vof(i,j)+VofsOld(i,j)>=1.d0-epsi).or.                    &
@@ -3080,7 +2920,7 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause 'ClsVof_2875'
+            pause'ClsVof_2875'
           end if
         end do
       end do

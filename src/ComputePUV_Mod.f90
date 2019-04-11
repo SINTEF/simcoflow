@@ -52,10 +52,10 @@ Module ComputePUV
       call Predictor_UV(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,PCell,UCell,    &
                               VCell,TVar,PU,PV,Pred,Flux_n1,TraPar,VolParU,    &
                               VolParV,SParU,SParV,BoomCase,dt,itt)
- !     If(itt/=197) then
+   !   If(itt/=1914) then
       call PoissonEquationSolver(PGrid,UGrid,VGrid,PCellO,PCell,UCell,VCell,   &
                                  TVar,Pred,PU,PV,Proj,BoomCase%vs,dt,itt)
- !     End if
+   !   End if
       do i=1,Isize-1
         do j=1,Jsize
           GRadPUV(i,j)=0.d0
@@ -98,7 +98,6 @@ Module ComputePUV
           end if
         end do
       end do
-
 !    Cell-Linking method for small cell
       do i=1,Isize-1
         do j=1,Jsize
@@ -109,24 +108,10 @@ Module ComputePUV
           end if
         end do
       end do
-    !  if(itt>=190) then
-    !    print*,'ComputePUV'
-    !    print*,VCell%vofS(306,116),VCell%vof(306,116)
-    !    print*,VCell%Posnu(306,116),VCell%MoExCell(306,116)
-    !    print*,'Vofs NEdge_Area'
-    !    print*,PCell%NEdge_Area(306,116)
-    !    print*,PCell%vofS(306,116),PCell%vofS(306,117)
-    !    print*,
-    !  end if
       do i=1,Isize
         do j=1,Jsize-1
           GRadPUV(i,j)=0.d0
           if(VCell%Posnu(i,j)/=-1.and.VCell%MoExCell(i,j)/=1) then
-         !   if((itt==196.or.itt==197).and.i==306.and.j==116) then
-         !     print*,'test compute 117'
-         !     print*,itt
-         !     print*,
-         !   end if
             if((PCell%vof(i,j)>=0.5d0.and.PCell%vofS(i,j)<epsi).or.            &
                 (PCell%phi(i,j)<0.d0.and.PCell%vofS(i,j)>=epsi))then  ! this cell is wet
               if((PCell%vof(i,j+1)<0.5d0.and.PCell%vofS(i,j+1)<epsi).or.       &
@@ -172,7 +157,6 @@ Module ComputePUV
           if(VCell%MoExCell(i,j)==1) then
             ii=VCell%MsCe(i,j,1)
             jj=VCell%MsCe(i,j,2)
-         !   TVar%v(i,j)= 0.d0 !Pred%v(i,j)!-GradPUV(ii,jj)/PV%Dp(ii,jj)*PV%Dp(i,j)
           end if
         end do
       end do
@@ -183,22 +167,20 @@ Module ComputePUV
           end if
         end do
       end do
-      do j = 1,Jsize
-        TVar%u(Isize,j)=((-TVar%v(Isize,j)*PCell%NEdge_Area(Isize,j)+          &
-                          TVar%v(Isize,j-1)*PCell%SEdge_Area(Isize,j))*        &
-                          PGrid%dx(Isize,j)+TVar%u(Isize-1,j)*                 &
-                          PCell%WEdge_Area(Isize,j)*PGrid%dy(Isize,j))/        &
-                          PCell%EEdge_Area(Isize,j)/PGrid%dy(Isize,j)
-      end do
+!      do j = 1,Jsize
+!        TVar%u(Isize,j)=((-TVar%v(Isize,j)*PCell%NEdge_Area(Isize,j)+          &
+!                          TVar%v(Isize,j-1)*PCell%SEdge_Area(Isize,j))*        &
+!                          PGrid%dx(Isize,j)+TVar%u(Isize-1,j)*                 &
+!                          PCell%WEdge_Area(Isize,j)*PGrid%dy(Isize,j))/        &
+!                          PCell%EEdge_Area(Isize,j)/PGrid%dy(Isize,j)
+!      end do
       do i = 1,Isize
         TVar%v(i,Jsize)=((-TVar%u(i,Jsize)*PCell%EEdge_Area(i,Jsize)           &
                 +TVar%u(i-1,Jsize)*PCell%WEdge_Area(i,Jsize))*PGrid%dy(i,Jsize)&
                 +TVar%v(i,Jsize-1)*PCell%SEdge_Area(i,Jsize)*PGrid%dx(i,Jsize))&
                                   /PGrid%dx(i,Jsize)/PCell%NEdge_Area(i,Jsize)
-     !   TVar%v(i,Jsize)=((-TVar%u(i,Jsize)*PCell%EEdge_Area(i,Jsize)           &
-     !           +TVar%u(i-1,Jsize)*PCell%WEdge_Area(i,Jsize))*PGrid%dy(i,Jsize)&
-     !           +TVar%v(i,Jsize-1)*PGrid%dx(i,Jsize))/PGrid%dx(i,Jsize)
       end do
+
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           TVar%mres(i,j)=(TVar%u(i,j)*PCell%EEdge_Area(i,j)-TVar%u(i-1,j)*     &
@@ -208,31 +190,29 @@ Module ComputePUV
                          -BoomCase%vs*PCell%nyS(i,j)*PCell%WlLh(i,j)
      !                   +((1.d0-PCell%vofS(i,j))-(1.d0-PCellO%vofS(i,j)))*     &
      !                     PGrid%dx(i,j)*PGrid%dy(i,j)
-          if(PCell%VofS(i,j)>-epsi.and.PCell%vofS(i,j)<epsi.and.j<Jsize) then
-            if(PCell%vofS(i,j+1)<1.d0+epsi.and.PCell%vofS(i,j+1)>1.d0-epsi) then
-              TVar%mres(i,j)=TVar%mres(i,j)-BoomCase%vs*(-1.d0)*PGrid%dx(i,j)
-            end if
-          end if
-          if(dabs(TVar%mres(i,j))>1.d10.and.PCell%Posnu(i,j)/=-1) then
-            print*,'Problem mass conservation'
-            print*,i,j,itt
-            print*,Tvar%mres(i,j)
-            print*,PCell%vof(i,j),PCell%vofS(i,j)
-            print*,PCell%Posnu(i,j)
-            print*,PCell%EEdge_Area(i,j),PCell%WEDge_Area(i,j)
-            print*,PCell%SEdge_Area(i,j),PCell%NEdge_Area(i,j)
-            print*,
-            print*,BoomCase%vs*PCell%nyS(i,j)*PCell%WlLh(i,j)
-            print*,(TVar%u(i,j)*PCell%EEdge_Area(i,j)-TVar%u(i-1,j)*     &
-                          PCell%WEdge_Area(i,j))*PGrid%dy(i,j)                 &
-                        +(TVar%v(i,j)*PCell%NEdge_Area(i,j)-TVar%v(i,j-1)*     &
-                          PCell%SEdge_Area(i,j))*PGrid%dx(i,j)
-            print*,
-            print*,BoomCase%vs,PCell%nyS(i,j),PCell%WlLh(i,j)
-            print*,TVar%v(i,j-1),TVar%v(i,j)
-            print*,TVar%u(i-1,j),TVar%u(i,j)
+          if(dabs(TVar%mres(i,j))>1.d-10.and.PCell%Posnu(i,j)/=-1) then
+!            print*,'Problem mass conservation'
+!            print*,i,j,itt
+!            print*,Tvar%mres(i,j)
+!            print*,PCell%vof(i,j),PCell%vofS(i,j)
+!            print*,PCell%Posnu(i,j)
+!            print*,PCell%EEdge_Area(i,j),PCell%WEDge_Area(i,j)
+!            print*,PCell%SEdge_Area(i,j),PCell%NEdge_Area(i,j)
+!            print*,
+!            print*,BoomCase%vs*PCell%nyS(i,j)*PCell%WlLh(i,j)
+!            print*,(TVar%u(i,j)*PCell%EEdge_Area(i,j)-TVar%u(i-1,j)*           &
+!                          PCell%WEdge_Area(i,j))*PGrid%dy(i,j)                 &
+!                        +(TVar%v(i,j)*PCell%NEdge_Area(i,j)-TVar%v(i,j-1)*     &
+!                          PCell%SEdge_Area(i,j))*PGrid%dx(i,j)
+!            print*,
+!            print*,BoomCase%vs,PCell%nyS(i,j),PCell%WlLh(i,j)
+!            print*,TVar%v(i,j-1),TVar%v(i,j)
+!            print*,TVar%u(i-1,j),TVar%u(i,j)
+!            print*,Pred%u(i,j)
+!            print*,
         !    pause 'solver_mod_219'
           end if
+          if(PCell%vofS(i,j)>1.d0-epsi) TVar%mres(i,j)=0.d0
         end do
       end do
       call VariablesInternalCellCondition(TVar,PCell,UCell,VCell)

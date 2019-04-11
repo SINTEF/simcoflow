@@ -85,18 +85,18 @@ Module PrintResult
    !  For Paraview
       if(PriPar==1) then
         Open(unit=5,file=trim(adjustl(dir))//'Paraview/ParticlesVTR_'//       &
-                                             trim(curd)//'.dat',action='write')
+                                             trim(curd)//'.txt',action='write')
         Write(5,*)'x,y,dp,up,vp'
         do i=1,Trapar%np
-          write(5,70) TraPar%Posp(i)%x/Lref,TraPar%Posp(i)%y/Lref,             &
-          TraPar%dp(i)/Lref,TraPar%uvp(i)%u/TVar%Uref,TraPar%uvp(i)%v/TVar%Uref
+          write(5,70) TraPar%Posp(i)%x/Lref,',',TraPar%Posp(i)%y/Lref,',',             &
+          TraPar%dp(i)/Lref,',',TraPar%uvp(i)%u/TVar%Uref,',',TraPar%uvp(i)%v/TVar%Uref
         enddo
         close(5)
       end if
    !  For Tecplot
       if(PriPar==1) then
-        Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//trim(curd)//         &
-                                                'Particles.dat',action='write')
+        Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//                       &
+                                                'Particles_'//trim(curd)//'.dat',action='write')
         Write(5,*)'variables = "x","y","dp","up","vp"'
         Write(5,*)'zone f=block, i=',TraPar%np,'j=',1
         Write(5,"(f24.14)")(TraPar%Posp(i)%x/Lref,i=1,TraPar%np)
@@ -107,7 +107,7 @@ Module PrintResult
         Close(5)
       end if
       Deallocate(p)
- 70   format(5(f24.14))
+ 70   format((f24.14),(a3),(f24.14),(a3),(f24.14),(a3),(f24.14),(a3),(f24.14))
     End Subroutine Print_Result_Tecplot_PCent
 
     Subroutine Print_Result_Tecplot_UCent(TGrid,TVar,TCell,itt)
@@ -119,8 +119,8 @@ Module PrintResult
       INTEGER(kind=it4b) i,j
       Character(15) curd
       Write(curd,'(i8.8)') itt
-      Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//trim(curd)//           &
-                                                'Uvelocity.dat',action='write')
+      Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//                         &
+                    'Uvelocity_'//trim(curd)//'.dat',action='write')
       Write(5,*) 'title = "flow"'
       Write(5,*) 'variables ="x","y","u","phi","vof","phiS","vofS","vofA"'
       Write(5,1113) Isize,Jsize
@@ -145,8 +145,8 @@ Module PrintResult
       INTEGER(kind=it4b) i,j
       Character(15) curd
       Write(curd,'(i8.8)') itt
-      Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//trim(curd)//            &
-                                                'Vvelocity.dat',action='write')
+      Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//                        &
+                  'Vvelocity_'//trim(curd)//'.dat',action='write')
       Write(5,*) 'title = "flow"'
       Write(5,*) 'variables ="x","y","v","phi","vof","phiS","vofS","vofA"'
       Write(5,1114) Isize,Jsize
@@ -215,6 +215,8 @@ Module PrintResult
       read(5,"(f24.14)")((VarRead(i,j),i=ibeg,Isize),j=jbeg,Jsize)
       read(5,"(f24.14)")((FluxP(i,j,1),i=ibeg,Isize),j=jbeg,Jsize)
       read(5,"(f24.14)")((FluxP(i,j,2),i=ibeg,Isize),j=jbeg,Jsize)
+      read(5,"(f24.14)")((TCell%nxS(i,j),i=ibeg,Isize),j=jbeg,Jsize)
+      read(5,"(f24.14)")((TCell%nyS(i,j),i=ibeg,Isize),j=jbeg,Jsize)
       close(5)
       deallocate(VarRead)
     END SUBROUTINE ReadOldDataPCell

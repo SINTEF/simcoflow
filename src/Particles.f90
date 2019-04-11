@@ -3,10 +3,10 @@ Module Particles
   USE MPI
   USE Mesh
   USE StateVariables
-  USE Clsvof,ONLY: vofeps
+  USE Clsvof,ONLY: vofeps,SolidObject
   PRIVATE
   INTEGER(kind=it4b),PARAMETER:: itp=10
-  REAL(KIND=dp),PARAMETER:: tol=1.d-30,Ca=0.5d0
+  REAL(KIND=dp),PARAMETER:: tol=1.d-20,Ca=0.5d0
   TYPE,PRIVATE:: ParVel
     REAL(KIND=dp):: u,v
   End TYPE ParVel
@@ -68,10 +68,11 @@ Module Particles
     end do
     deallocate(ranum)
   end subroutine InitializeParticles
-  subroutine TrackingParticles(PGrid,PCell,Var,dt,TraPar)
+  subroutine TrackingParticles(PGrid,PCell,BoomCase,Var,dt,TraPar)
     IMPLICIT NONE
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(Cell),INTENT(IN):: PCell
+    TYPE(SolidObject),INTENT(INOUT):: BoomCase
     TYPE(Variables),INTENT(IN):: Var
     REAL(KIND=dp),INTENT(IN):: dt
     TYPE(Particle),INTENT(INOUT):: TraPar
@@ -99,14 +100,15 @@ Module Particles
         call ParticlePosition(TraPar%Posp(i),PGrid,ii,jj)
         if(ii/=-1.and.jj/=-1) then
           if(TraPar%PosP(i)%x/Lref<PGrid%x(Isize,1).and.                       &
-             TraPar%PosP(i)%y/Lref<PGrid%y(1,Jsize)) then
-            ropp=row*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj))+                &
+             TraPar%PosP(i)%y/Lref<PGrid%y(1,Jsize).and.                       &
+             PCell%vofS(ii,jj)<1.d0-epsi) then
+            ropp=row*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)+            &
                  roa*(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
-                     (1.d0-PCell%vofS(ii,jj))
+                     (1.d0-PCell%vofS(ii,jj)+tol)
             gama=rop/ropp
-            nupp=nuw*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj))+                &
+            nupp=nuw*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)+            &
                  nua*(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
-                     (1.d0-PCell%vofS(ii,jj))
+                     (1.d0-PCell%vofS(ii,jj)+tol)
             dudx=(Var%u(ii,jj)-Var%u(ii-1,jj))/PGrid%dx(ii,jj)
             dvdy=(Var%v(ii,jj)-Var%v(ii,jj-1))/PGrid%dy(ii,jj)
             ug0=0.5d0*(Var%u(ii,jj)+Var%u(ii-1,jj))
@@ -133,10 +135,30 @@ Module Particles
             Vpn(i)=Vpo(i)*exp(-beta*dtp)+vg*(1.d0-exp(-beta*dtp))+              &
                    sig/beta*(1.d0-exp(-beta*dtp))
             xyp(i)%y=xyp(i)%y+0.5d0*(Vpn(i)+Vpo(i))*dtp
-            if(isnan(Upo(i)).or.dabs(xyp(i)%x)>1.d10.or.dabs(axp(i))>1.d10) then
+            if(isnan(Upo(i)).or.dabs(xyp(i)%x)>1.d10.or.dabs(axp(i))>1.d10.or.  &
+                                            isnan(upn(i)).or.isnan(vpn(i))) then
               print*,i
               print*,axp(i),dtp
+              print*,
+              print*,(1.d0-gama)/(gama+Ca)*gx,3.d0*Cd/8.d0/(TraPar%dp(i)/2.d0)/   &
+                   (gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
+              print*,3.d0*Cd/8.d0,(TraPar%dp(i)/2.d0)
+              print*,(gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
+              print*,
+              print*,Reyp
+              print*,
+              print*,'What the fuck'
+              print*,TraPar%uvp(i)%u,TraPar%uvp(i)%v
+              print*,nupp
+              print*,PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)
+              print*,(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
+                     (1.d0-PCell%vofS(ii,jj)+tol)
+              print*,
+              print*,Upo(i),exp(-beta*dtp),ug*(1.d0-exp(-beta*dtp))
+              print*,sig,beta,(1.d0-exp(-beta*dtp))
               print*,upn(i),upo(i)
+              print*,
+              print*,dudx,dvdy
               print*,
               print*,beta,sig,exp(-beta*dtp)
               print*,
@@ -148,10 +170,22 @@ Module Particles
               print*,
               print*,TraPar%Posp(i)%x,TraPar%Posp(i)%y
               print*,PCell%vof(ii,jj)
-              pause 'Particle 127'
+              pause'Particle 127'
             end if
             Upo(i)=Upn(i)
             Vpo(i)=Vpn(i)
+          elseif(PCell%vofS(ii,jj)>1.d0-epsi) then
+            Upn(i)=BoomCase%us
+            Vpn(i)=BoomCase%vs
+            xyp(i)%x=xyp(i)%x+0.5d0*(Upn(i)+Upo(i))*dtp
+            xyp(i)%y=xyp(i)%y+0.5d0*(Vpn(i)+Vpo(i))*dtp
+            Upo(i)=Upn(i)
+            Vpo(i)=Vpn(i)
+          else
+            Upn(i)=0.d0
+            Vpn(i)=0.d0
+            xyp(i)%x=1.d3
+            xyp(i)%y=1.d3
           end if
         end if
       end do
@@ -229,7 +263,7 @@ Module Particles
     call Random_Number(ranum)
     do i=TraPar%np+1,TraPar%np+NParInlet
       TraPar%Posp(i)%x=PGrid%x(1,1)+PGrid%dx(1,1)/3.d0
-      TraPar%Posp(i)%y=Hw-Amp0*2.d0-HParInlet*ranum(i-TraPar%np)
+      TraPar%Posp(i)%y=Depthw-Amp0*2.d0-HParInlet*ranum(i-TraPar%np)
     end do
     call Random_Number(ranum)
     do i=TraPar%np+1,TraPar%np+NParInlet

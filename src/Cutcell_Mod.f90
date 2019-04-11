@@ -202,6 +202,15 @@ Module Cutcell
             TCell%WEdge_Area(i+1,j)=AverageFace
           end do
         end do
+!        print*,'test cutcell 205'
+!        print*,TCell%vofS(299,76)
+!        print*,TCell%WEDge_Area(299,76),TCell%EEDge_Area(299,76)
+!        print*,TCell%SEDge_Area(299,76),TCell%NEDge_Area(299,76)
+!        print*,
+!        print*,TCell%vofS(299,77)
+!        print*,TCell%WEDge_Area(299,77),TCell%EEDge_Area(299,77)
+!        print*,TCell%SEDge_Area(299,77),TCell%NEDge_Area(299,77)
+!        print*,
    !    Modify the face area for sharing cell
         do i=1,Isize
           do j=1,Jsize
@@ -247,6 +256,46 @@ Module Cutcell
             end if
           end do
         end do
+        if((ICorProb.eqv..TRUE.).and.(.not.allocated(TCell%MoExCell))) then
+          do i=1,Isize
+            do j=1,Jsize-4
+              if(TCell%VofS(i,j)>-epsi.and.TCell%vofS(i,j)<epsi) then
+                if(TCell%vofS(i,j+1)>0.6d0-epsi.and.TCell%vofS(i,j+1)<0.6d0+   &
+                                                                      epsi) then
+                  if(TCell%vofS(i,j+2)>0.6d0-epsi.and.TCell%vofS(i,j+2)<0.6d0+ &
+                                                                      epsi) then
+                    TCell%NEdge_ARea(i,j)=0.40
+                    TCell%SEDGe_Area(i,j+1)=0.4d0
+                    TCell%FCN(i,j,1)=-0.3d0*TGrid%dx(i,j)
+                    TCell%FCN(i,j,2)=0.5d0*TGrid%dy(i,j)
+                    TCell%WlLh(i,j)=0.6d0*TGrid%dx(i,j)
+                    TCell%nyS(i,j)=-1.d0
+                    TCell%nxS(i,j)=0.d0
+                  end if
+                end if
+                if(TCell%vofS(i,j+1)>1.d0-epsi.and.TCell%vofS(i,j+1)<1.d0+     &
+                                                                      epsi) then
+                  TCell%WlLh(i,j)=TGrid%dx(i,j)
+                  TCell%nyS(i,j)=-1.d0
+                  TCell%nxS(i,j)=0.d0
+                end if
+              end if
+            end do
+          end do
+        end if
+!        print*,'test cutcell 259'
+!        if((.not.allocated(TCell%MoExCell))) then
+!        print*,'***********************************************'
+!        print*,'this is pcell'
+!        end if
+!        print*,TCell%vofS(299,76)
+!        print*,TCell%WEDge_Area(299,76),TCell%EEDge_Area(299,76)
+!        print*,TCell%SEDge_Area(299,76),TCell%NEDge_Area(299,76)
+!        print*,
+    !    print*,TCell%vofS(299,77)
+    !    print*,TCell%WEDge_Area(299,77),TCell%EEDge_Area(299,77)
+    !    print*,TCell%SEDge_Area(299,77),TCell%NEDge_Area(299,77)
+    !    pause 'end test cutcell 267'
         deallocate(FCW,FCS)
       end subroutine Cell_Geo_Cal
 
