@@ -87,7 +87,7 @@ Module ProjectionP
             print*,'Problem start'
             print*,resi,rhm(i,j),dabs(resi-rhm(i,j))
             print*,i,j
-            pause'ProjectionP_86'
+            pause 'ProjectionP_86'
           end if
         end do
       end do

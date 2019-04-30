@@ -172,7 +172,7 @@ Module StateVariables
           Vari%u(Isize,j)=UwInlet!-Amp0*kw*(UwInlet-cw0)*                       &
             ! dsin(kw*(xwuout-cw0*Time))*dcosh(kw*PGrid%y(Isize,j))/dsinh(kw*Hwout)
         else
-          Vari%u(Isize,j)=UgInle  t!+Amp0*kw*(UgInlet-cw0)*                       &
+          Vari%u(Isize,j)=UgInlet  !+Amp0*kw*(UgInlet-cw0)*                       &
             ! dsin(kw*(xwuout-cw0*Time))*dcosh(kw*(PGrid%y(Isize,j)-HChannel))/ &
             !                                                     dsinh(kw*Haout)
         end if

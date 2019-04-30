@@ -251,7 +251,7 @@ Module PredictorUV
               print*,i,j
               print*,Pred%u(i,j),UCell%vofS(i,j)
               print*,'flux'
-              pause'PredictorUV_156'
+              pause 'PredictorUV_156'
             end if
           end if
         end do
@@ -415,7 +415,7 @@ Module PredictorUV
               print*,VCell%Posnu(i,j)
               print*,
               print*,FluxDiv(i,j,2)
-              pause'PredictorUV_218'
+              pause 'PredictorUV_218'
             end if
           end if
         end do
@@ -490,7 +490,7 @@ Module PredictorUV
               print*,
               print*,TraPar%mp(i),TraPar%tp(i),TraPar%VRelG(i)
               print*,TVar%Roref*TVar%Uref/VGrid%Lref,zp,Vro(ii,jj)
-              pause'Momentum Particle 425'
+              pause 'Momentum Particle 425'
             end if
           end if
         end if
