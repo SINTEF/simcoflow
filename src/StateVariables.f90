@@ -1,7 +1,6 @@
 Module StateVariables
     USE PrecisionVar
     USE Mesh
-    USE Matrix
     IMPLICIT NONE
     PRIVATE
     INTEGER(kind=it4b),PUBLIC::ight=1,jght=1

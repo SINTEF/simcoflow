@@ -3,7 +3,6 @@ Module Clsvof
     USE Mesh
     USE Cutcell
     USE StateVariables
-    USE Matrix
     IMPLICIT NONE
     PRIVATE
     INTEGER,PARAMETER:: band_width = 4,nv = 10,nl = 5

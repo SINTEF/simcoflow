@@ -3,8 +3,8 @@ Module PredictorUV
     USE Mesh
     USE Cutcell
     USE Clsvof
-    USE StateVariables
-    USE Matrix
+    USE StateVariables, ONLY : Variables, epsi, nua, nuref, nuw, rey, roa, roref, row, fr, betavis, ight, pi, rop, UParInlet, &
+        &                      zp, jght
     USE Printresult
     USE MPI
     USE Particles
