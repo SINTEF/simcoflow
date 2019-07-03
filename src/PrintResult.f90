@@ -1,7 +1,7 @@
 Module PrintResult
     USE PrecisionVar
     USE Mesh
-    USE StateVariables, ONLY : ight,jght,variables,rey,xc,yc, &
+    USE StateVariables, ONLY : variables,rey,xc,yc, &
                                roa,row,Fr,roref,Lref,dir
     USE Constants, ONLY : pi, Ktw
     USE Clsvof

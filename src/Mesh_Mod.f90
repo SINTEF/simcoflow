@@ -1,7 +1,9 @@
 Module Mesh
     USE PrecisionVar
     USE MPI
+    IMPLICIT NONE
     PRIVATE
+    INTEGER(kind=it4b),PUBLIC::ight=1,jght=1
     INTEGER(kind=it4b),PRIVATE:: ibeg=1,jbeg=1
     INTEGER(kind=it4b),PRIVATE:: Isize,Jsize
     TYPE,PUBLIC:: Point
@@ -81,7 +83,6 @@ Module Mesh
         INTEGER(it4b), INTENT(in) :: Isize_in
         INTEGER(it4b), INTENT(in) :: Jsize_in
         !
-        INTEGER(it4b) :: ibeg, jbeg
         Isize = Isize_in
         Jsize = Jsize_in
         allocate(this%UGrid%x(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))

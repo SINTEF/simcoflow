@@ -4,7 +4,6 @@ Module StateVariables
     USE Mesh
     IMPLICIT NONE
     PRIVATE
-    INTEGER(kind=it4b),PUBLIC::ight=1,jght=1
     INTEGER(kind=it4b),PUBLIC::ite
     REAL(KIND=dp),PUBLIC::Lref,Rey,Fr,wa,Ta,xc,yc,UwInlet,UgInlet,             &
                           xmax,Roref,Hw,Ha,VofInlet,nuref

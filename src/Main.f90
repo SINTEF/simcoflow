@@ -42,6 +42,7 @@ Program Main
     Jsize=160
     NI=Isize+1
     NJ=Jsize+1
+    call MPI_Initial
     simcomesh = TsimcoMesh(Isize, Jsize)
 
     allocate(Var%u(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
@@ -127,7 +128,6 @@ Program Main
     call simcomesh%Initial_Grid2(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,Lref,0)
     call simcomesh%HYPRE_CreateGrid2()
     !
-    call MPI_Initial
 !    call HYPRE_CreateGrid(PGrid)
     call Initial_Clsvof(simcomesh%PGrid,simcomesh%PCell,BoomCase)
     call Initial_Clsvof(simcomesh%UGrid,simcomesh%UCell,BoomCase)
