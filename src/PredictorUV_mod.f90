@@ -3,8 +3,9 @@ Module PredictorUV
     USE Mesh
     USE Cutcell
     USE Clsvof
-    USE StateVariables, ONLY : Variables, epsi, nua, nuref, nuw, rey, roa, roref, row, fr, betavis, ight, pi, rop, UParInlet, &
+    USE StateVariables, ONLY : Variables, epsi, nua, nuref, nuw, rey, roa, roref, row, fr, betavis, ight, rop, UParInlet, &
         &                      zp, jght
+    USE Constants, ONLY : pi
     USE Printresult
     USE MPI
     USE Particles
@@ -59,6 +60,8 @@ Module PredictorUV
       REAL(KIND=dp):: BetaP,BetaM,BetaW,Lamda,Fluxn0
   !   for particle tracking
       REAL(KIND=dp):: nupp,ropp,ug,vg,Reyp,Cd,mp,tp,Vrel
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(MaFluxEW(ibeg:Isize+1,jbeg:Jsize,2))
       allocate(MaFluxNS(ibeg:Isize,jbeg:Jsize+1,2))
       allocate(VofFluxEW(ibeg:Isize+1,jbeg:Jsize,2))
@@ -638,6 +641,8 @@ Module PredictorUV
         REAL(KIND=dp):: aP,aE,aW,aN,aS,De,Dw,Dn,Ds,Sp,VofAF
         REAL(KIND=dp):: Fe,Fw,Fn,Fs,Fep,Fem,Fwp,Fwm,Fnp,Fnm,Fsp,Fsm
         REAL(KIND=dp):: values(0:4)
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         ilower = 0
         iupper = TCell%ExtCell
       ! Create and Set up matrix
@@ -782,6 +787,8 @@ Module PredictorUV
         INTEGER(kind=it4b),DIMENSION(:),allocatable:: rows
         REAL(KIND=dp),DIMENSION(:),allocatable:: rhs,xval
         REAL(KIND=dp):: BetaP,BetaM,BetaW,Lamda
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         BetaP = 1.d0/(row/Roref)
         BetaM = 1.d0/(roa/Roref)
         ilower = 0
@@ -853,6 +860,8 @@ Module PredictorUV
         INTEGER(kind=it4b):: ilower,iupper,local_size,ctr
         INTEGER(kind=it4b),DIMENSION(:),allocatable:: rows
         REAL(KIND=dp),DIMENSION(:),allocatable:: values
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         ilower = 0
         iupper = TCell%ExtCell
         local_size = TCell%ExtCell+1 ! number of element
@@ -896,6 +905,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: uw,vw,us,vs,epsi,uwn,uwp,vsn,vsp
       REAL(KIND=dp):: eta,Sx,Sy
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       epsi = 1.d-20
       do i = 1,Isize+idir
         do j = 1,Jsize+jdir
@@ -1007,6 +1018,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: xew,xe,xw,yns,yn,ys,vsp,vsn,uwp,uwn
       REAL(KIND=dp):: uw,us,vw,vs,epsil,delh,delh1,delh2,delhec,eta,nx,ny,sx,sy
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       epsil = 1.d-20
       do i=1,Isize+idir
         do j=1,Jsize+jdir
@@ -1193,6 +1206,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j,Lim
       REAL(KIND=dp):: ul,ur,vl,vr,alr,uwp,uwn,sx,sy,uw,delhec,delh,eta
       REAL(KIND=dp):: omei,omei1,ri,ri1,tolim,tol
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       tol=1.d-24
       Lim=2
       do j=1,Jsize
@@ -1314,6 +1329,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j,Lim
       REAL(KIND=dp):: ul,ur,vl,vr,alr,delhec,delh,tol
       REAL(KIND=dp):: omei,omei1,ri,ri1,tolim,Sx,Sy,vs,vsp,vsn,eta
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       Lim=2
       tol=1.d-24
       do i=1,Isize
@@ -1439,6 +1456,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j,Lim
       REAL(KIND=dp):: ul,ur,vl,vr,alr,volf,vols,rolr,rol,ror,uw
       REAL(KIND=dp):: omei,omei1,ri,ri1,tolim,tol
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       tol=1.d-24
       Lim=2
       do j=1,Jsize
@@ -1600,6 +1619,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j,Lim
       REAL(KIND=dp):: ul,ur,vl,vr,alr,rolr,rol,ror,volf,vols,vs
       REAL(KIND=dp):: omei,omei1,ri,ri1,tolim,tol
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       tol=1.d-24
       Lim=2
       do i=1,Isize
@@ -1759,6 +1780,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: uw,vs,uwn,uwp,vsn,vsp
       REAL(KIND=dp):: eta,Sx,Sy
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       if(idir==1) then
         do i = 1,Isize+1
           do j = 1,Jsize
@@ -1880,6 +1903,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: uw,vs,uwn,uwp,vsn,vsp,VofFace,diss,nxx,nyy
       REAL(KIND=dp):: eta,Sx,Sy,volf,vols
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = 1,Isize+idir
         do j = 1,Jsize+jdir
           if(idir==1) then
@@ -2038,6 +2063,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT)::flux,Eflux,ExEFlux
       REAL(KIND=dp):: tol,VofFace,VofSFace,Sx,Sy
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       tol = 1.d-24
       Eflux(:,:,:)=0.d0
       EXEFlux(:,:,:)=0.d0
@@ -2132,6 +2159,8 @@ Module PredictorUV
       INTEGER(kind=it4b):: i,j,ii,jj
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: flux
       REAL(KIND=dp):: Fmix(3),Beta(3),Vtgt(3),temp
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(flux(ibeg:Isize,jbeg:Jsize))
       flux(:,:)=flux_mix(:,:)
       do i=ibeg,Isize-idir
@@ -2202,6 +2231,8 @@ Module PredictorUV
       TYPE(Variables),INTENT(IN):: TVar
       REAL(KIND=dp),PARAMETER:: Twall = 300.d0
       INTEGER(kind=it4b):: i,j
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do j = jbeg,Jsize+jbeg-1
       ! Outlet
     !    Pred%u(Isize+ibeg-1,j)=Pred%u(Isize+ibeg-2,j)

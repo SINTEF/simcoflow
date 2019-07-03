@@ -4,7 +4,7 @@ Module Cutcell
     USE StateVariables
     IMPLICIT NONE
     PRIVATE
-    PUBLIC:: Grid_Preprocess,NumberExternalCell,NewCellFace
+    PUBLIC:: Grid_Preprocess,NewCellFace
     Interface Grid_Preprocess
       Module procedure Grid_Preprocess
     End interface Grid_Preprocess
@@ -15,26 +15,29 @@ Module Cutcell
       Module procedure NewCellFace
     End interface
     Contains
-      Subroutine Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,itt)
+      Subroutine Grid_Preprocess(simcomesh, TVar,itt)
         IMPLICIT NONE
-        TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
-        TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell
+        TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
         TYPE(Variables),INTENT(IN):: TVar
         INTEGER(kind=it8b),INTENT(IN):: itt
         INTEGER(kind=it4b):: i,j
-        call Cell_Geo_Cal(PGrid,PCell)
-        call Cell_Geo_Cal(UGrid,UCell)
-        call Cell_Geo_Cal(VGrid,VCell)
-        call DefineMomentumExchangeCell(PCell,UCell,VCell)
-        call NumberExternalCell(PCell,0,0)
-        call NumberExternalCell(UCell,1,0)
-        call NumberExternalCell(VCell,0,1)
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+        call Cell_Geo_Cal(simcomesh%PGrid,simcomesh%PCell, ibeg, jbeg, Isize, Jsize)
+        call Cell_Geo_Cal(simcomesh%UGrid,simcomesh%UCell, ibeg, jbeg, Isize, Jsize)
+        call Cell_Geo_Cal(simcomesh%VGrid,simcomesh%VCell, ibeg, jbeg, Isize, Jsize)
+        call DefineMomentumExchangeCell(simcomesh%PCell,simcomesh%UCell,simcomesh%VCell, ibeg, &
+             &                          jbeg, Isize, Jsize)
+        call NumberExternalCell(simcomesh%PCell,0,0, ibeg, jbeg, Isize, Jsize)
+        call NumberExternalCell(simcomesh%UCell,1,0, ibeg, jbeg, Isize, Jsize)
+        call NumberExternalCell(simcomesh%VCell,0,1, ibeg, jbeg, Isize, Jsize)
       End subroutine Grid_Preprocess
 
-      Subroutine Cell_Geo_Cal(TGrid,TCell)
+      Subroutine Cell_Geo_Cal(TGrid,TCell, ibeg, jbeg, Isize, Jsize)
         IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: TGrid
         TYPE(Cell),INTENT(INOUT):: TCell
+        INTEGER(it4b), INTENT(in) :: ibeg, jbeg, Isize, Jsize
         TYPE(Point):: Pt(0:1,0:1),FaCe
         INTEGER(kind=it4b):: i,j,ii,jj,ctr
         REAL(KIND=dp):: Nodels(0:1,0:1),MaxFace,AverageArea
@@ -337,10 +340,11 @@ Module Cutcell
       end subroutine Edge_Geo_Cal
 
   ! numbering the pressure cell for poisson equation
-      Subroutine NumberExternalCell(TCell,iu,iv)
+      Subroutine NumberExternalCell(TCell,iu,iv, ibeg, jbeg, Isize, Jsize)
         IMPLICIT NONE
         TYPE(Cell),INTENT(INOUT):: TCell
         INTEGER(kind=it4b),INTENT(IN):: iu,iv
+        INTEGER(it4b), INTENT(in) :: ibeg, jbeg, Isize, Jsize
         INTEGER(kind=it4b):: i,j
         INTEGER(kind=it4b):: ctr
         ctr = 0
@@ -357,10 +361,11 @@ Module Cutcell
         TCell%ExtCell = ctr-1
       End subroutine NumberExternalCell
 
-      subroutine DefineMomentumExchangeCell(PCell,UCell,VCell)
+      subroutine DefineMomentumExchangeCell(PCell,UCell,VCell, ibeg, jbeg, Isize, Jsize)
         IMPLICIT NONE
         TYPE(Cell),INTENT(INOUT):: PCell
         TYPE(Cell),INTENT(INOUT):: UCell,VCell
+        INTEGER(it4b), INTENT(in) :: ibeg, jbeg, Isize, Jsize
         INTEGER(kind=it4b):: i,j
         do i = ibeg,ibeg+Isize-1
           do j = jbeg,jbeg+Jsize-1
@@ -396,11 +401,12 @@ Module Cutcell
         end do
       end subroutine DefineMomentumExchangeCell
 
-      Subroutine NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
+      Subroutine NewCellFace(simcomesh)
         IMPLICIT NONE
-        TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell
-        TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
-        INTEGER(kind=it4b):: i,j,k,ii,jj,temp
+        TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
+        TYPE(Cell) :: PCell,UCell,VCell
+        TYPE(Grid) :: PGrid,UGrid,VGrid
+        INTEGER(kind=it4b):: i,j,k,ii,jj,temp, ibeg, jbeg, Isize, Jsize
         REAL(KIND=dp):: MaxFace
         INTEGER(kind=it4b),PARAMETER:: nx=5,ny=5
         REAL(KIND=dp):: dxx,dyy,xx,yy,dd,Cdis,vol,delh,Sx,Sy
@@ -409,6 +415,16 @@ Module Cutcell
         REAL(KIND=dp),DIMENSION(:,:):: node(6,2)
         tol = 1.d-24
         tol1 = 1.d-14
+        ! This is a shortcut
+        PCell = simcomesh % PCell
+        UCell = simcomesh % UCell
+        VCell = simcomesh % VCell
+        Pgrid = simcomesh % Pgrid
+        Ugrid = simcomesh % Ugrid
+        Vgrid = simcomesh % Vgrid
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+
+        !
      !   dxx = PGrid%delx/dble(nx)
      !   dyy = PGrid%dely/dble(ny)
         temp = 0
@@ -542,17 +558,18 @@ Module Cutcell
         end do
       ! Define other Coefficients which are used for convective flux and diffusive calculation
       ! For UCell
-        call EastFaceInterpolationInf(UCell,UGrid,PGrid,1)
-        call NorthFaceInterpolationInf(UCell,UGrid,VGrid,0)
-        call EastFaceInterpolationInf(VCell,VGrid,UGrid,0)
-        call NorthFaceInterpolationInf(VCell,VGrid,PGrid,1)
+        call EastFaceInterpolationInf(UCell,UGrid,PGrid,1, Isize, Jsize)
+        call NorthFaceInterpolationInf(UCell,UGrid,VGrid,0, Isize, Jsize)
+        call EastFaceInterpolationInf(VCell,VGrid,UGrid,0, Isize, Jsize)
+        call NorthFaceInterpolationInf(VCell,VGrid,PGrid,1, Isize, Jsize)
       end subroutine NewCellFace
 
-      SUBROUTINE EastFaceInterpolationInf(TCell,TGrid,BGrid,iu)
+      SUBROUTINE EastFaceInterpolationInf(TCell,TGrid,BGrid,iu, Isize, Jsize)
         IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: TGrid,BGrid
         TYPE(Cell),INTENT(INOUT):: TCell
         INTEGER(kind=it4b),INTENT(IN):: iu
+        INTEGER(it4b), INTENT(in) :: Isize, Jsize
         INTEGER(kind=it4b):: i,j
         REAL(KIND=dp):: IntPointDist,FaceCenterDist,Sy,xf,yf,nxf,nyf,Sx
         do j = 1,Jsize
@@ -615,11 +632,12 @@ Module Cutcell
         end do
       END SUBROUTINE EastFaceInterpolationInf
 
-      SUBROUTINE NorthFaceInterpolationInf(TCell,TGrid,BGrid,iv)
+      SUBROUTINE NorthFaceInterpolationInf(TCell,TGrid,BGrid,iv, Isize, Jsize)
         IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: TGrid,BGrid
         TYPE(Cell),INTENT(INOUT):: TCell
         INTEGER(kind=it4b),INTENT(IN):: iv
+        INTEGER(it4b), INTENT(in) :: Isize, Jsize
         INTEGER(kind=it4b):: i,j
         REAL(KIND=dp):: IntPointDist,FaceCenterDist,xf,yf,nxf,nyf,Sx
         do i = 1,Isize

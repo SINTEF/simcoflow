@@ -17,19 +17,21 @@ Program Main
     USE Cutcell
     USE Clsvof
     USE StateVariables
+    USE Constants, ONLY : g, pi
     USE PrintResult
     USE MPI
     USE Solver
     USE Particles
     IMPLICIT NONE
-    TYPE(Grid):: UGrid,VGrid,PGrid
-    TYPE(Cell):: UCell,VCell,PCell
-    TYPE(Point):: ReS,ReE
+    TYPE(Point):: ReS,ReE, Start_Point, End_Point
     TYPE(Variables):: Var
     TYPE(Particle):: TraPar
     TYPE(SolidObject):: BoomCase
     INTEGER(kind=it4b):: Irec,Jrec,NI,NJ,iprint
     REAL(KIND=dp):: vel,Uref,Vint
+    TYPE(TsimcoMesh) :: simcomesh
+    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+    call getMeshSizes(ibeg, jbeg, Isize, Jsize) !Isize and Jsize are overwritten by user
     open(unit=5,file='input.dat',action='read')
     read(5,*),
     read(5,*), Isize, Jsize, Irec, Jrec, Rey, Hw, iprint
@@ -40,94 +42,7 @@ Program Main
     Jsize=160
     NI=Isize+1
     NJ=Jsize+1
-    allocate(UGrid%x(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UGrid%y(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VGrid%x(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VGrid%y(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(PGrid%x(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(PGrid%y(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UGrid%dx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UGrid%dy(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VGrid%dx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VGrid%dy(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(PGrid%dx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(PGrid%dy(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-
-    allocate(UCell%vof(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%phi(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%nx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%ny(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%vofS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%phiS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%nxS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%nyS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%EEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(UCell%WEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(UCell%NEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(UCell%SEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(UCell%MoExCell(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(UCell%EtaE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%EtaN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%DAlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%DAlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%AlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%AlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%SxE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%SyN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-    allocate(UCell%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-    allocate(UCell%WlLh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(UCell%delh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(UCell%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(UCell%Cell_Cent(Isize,Jsize,2))
-    allocate(UCell%MsCe(Isize,Jsize,2))
-
-    allocate(VCell%vof(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%phi(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%nx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%ny(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%vofS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%phiS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%nxS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%nyS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%EEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(VCell%WEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(VCell%NEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(VCell%SEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-    allocate(VCell%MoExCell(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-    allocate(VCell%EtaE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%EtaN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%DAlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%DAlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%AlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%AlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%SxE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%SyN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-    allocate(VCell%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-    allocate(VCell%WlLh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(VCell%delh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(VCell%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(VCell%Cell_Cent(Isize,Jsize,2))
-    allocate(VCell%MsCe(Isize,Jsize,2))
-
-    allocate(PCell%vof(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%phi(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%nx(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%ny(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%vofS(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%phiS(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%nxS(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%nyS(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%EEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-    allocate(PCell%WEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-    allocate(PCell%NEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-    allocate(PCell%SEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-    allocate(PCell%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-    allocate(PCell%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-    allocate(PCell%WlLh(ibeg:Isize,jbeg:Jsize))
-    allocate(PCell%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-    allocate(PCell%Cell_Cent(Isize,Jsize,2))
+    simcomesh = TsimcoMesh(Isize, Jsize)
 
     allocate(Var%u(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
     allocate(Var%v(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
@@ -204,21 +119,26 @@ Program Main
 !   define corner problem
     ICorProb=.TRUE.
     IttRun=600
-    call Initial_Grid(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,PGrid,Lref,0)
-    call InitialUVGrid(PGrid,UGrid,0,Lref)
-    call InitialUVGrid(PGrid,VGrid,1,Lref)
+!    call Initial_Grid(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,PGrid,Lref,0)
+!    call InitialUVGrid(PGrid,UGrid,0,Lref)
+!    call InitialUVGrid(PGrid,VGrid,1,Lref)
+    ! Using TsimcoMesh
+    call simcomesh%InitialUVGrid2(Lref, Lref)
+    call simcomesh%Initial_Grid2(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,Lref,0)
+    call simcomesh%HYPRE_CreateGrid2()
+    !
     call MPI_Initial
-    call HYPRE_CreateGrid(PGrid)
-    call Initial_Clsvof(PGrid,PCell,BoomCase)
-    call Initial_Clsvof(UGrid,UCell,BoomCase)
-    call Initial_Clsvof(VGrid,VCell,BoomCase)
-    call Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,Var,int8(1))
-    call Initial_Var(PCell,PGrid,Var,vel,Vint,0.d0,300.d0,Uref,300.d0,Roref,Lref)
-    call InitializeParticles(PGrid,Var,TraPar)
+!    call HYPRE_CreateGrid(PGrid)
+    call Initial_Clsvof(simcomesh%PGrid,simcomesh%PCell,BoomCase)
+    call Initial_Clsvof(simcomesh%UGrid,simcomesh%UCell,BoomCase)
+    call Initial_Clsvof(simcomesh%VGrid,simcomesh%VCell,BoomCase)
+    call Grid_Preprocess(simcomesh,Var,int8(1))
+    call Initial_Var(simcomesh, simcomesh%PCell,simcomesh%PGrid,Var,vel,Vint,0.d0,300.d0,Uref,300.d0,Roref,Lref)
+    call InitializeParticles(simcomesh%PGrid,Var,TraPar)
   !  call Print_Result_Tecplot_PCent(PGrid,Var,PCell,TraPar,INT8(0),1)
-    call Print_Result_Tecplot_UCent(UGrid,Var,UCell,INT8(0))
-    call Print_Result_Tecplot_VCent(VGrid,Var,VCell,INT8(0))
-    call NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
-    call IterationSolution(PGrid,UGrid,VGrid,PCell,UCell,VCell,Var,TraPar,BoomCase,50)
+    call Print_Result_Tecplot_UCent(simcomesh%UGrid,Var,simcomesh%UCell,INT8(0))
+    call Print_Result_Tecplot_VCent(simcomesh%VGrid,Var,simcomesh%VCell,INT8(0))
+    call NewCellFace(simcomesh)
+    call IterationSolution(simcomesh, Var,TraPar,BoomCase,50)
     pause
 end program main

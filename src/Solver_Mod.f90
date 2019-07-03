@@ -1,7 +1,8 @@
 Module Solver
     USE PrecisionVar
-    USE Mesh
+    USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Grid, Cell, Point
     USE StateVariables
+    USE Constants, ONLY : g
     USE CutCell
     USE Clsvof
     USE PrintResult
@@ -27,16 +28,16 @@ Module Solver
       Module Procedure IterationSolution
     End Interface IterationSolution
     Contains
-    subroutine IterationSolution(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,     &
+    subroutine IterationSolution(simcomesh, TVar,     &
                                  TraPar,BoomCase,iprint)
       IMPLICIT NONE
-      TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
-      TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell
+      TYPE(TsimcoMesh) , INTENT(inout) :: simcomesh
       TYPE(Variables),INTENT(INOUT):: TVar
       INTEGER(kind=it4b),INTENT(IN):: iprint
       TYPE(Particle),INTENT(INOUT):: TraPar
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
       TYPE(Cell):: PCellO,UCellO,VCellO
+      TYPE(TsimcoMesh) :: simcomesh0
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: GraP
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: Flux_n1
       TYPE(SolverTime):: Time
@@ -46,6 +47,8 @@ Module Solver
       INTEGER(kind=it8b):: itt,tempvel
       REAL(KIND=dp):: velaver,timeb
       CHARACTER(LEN=80):: filename,curd
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(Flux_n1(0:Isize+1,0:Jsize+1,2))
       Flux_n1(:,:,:)=0.d0
       allocate(GraP(1:Isize,1:Jsize))
@@ -84,91 +87,17 @@ Module Solver
     ! Flag to print wave profile (1 for printing)
     ! This variables is assigned value in ComputeTimeStep Subroutine
       WavePrint=0
-      call PrintWaterWave(Time%PhysT,PGrid,PCell)
-      allocate(UCellO%vof(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%phi(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%nx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%ny(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%vofS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%phiS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%nxS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%nyS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%EEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(UCellO%WEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(UCellO%NEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(UCellO%SEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(UCellO%MoExCell(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(UCellO%EtaE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%EtaN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%DAlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%DAlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%AlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%AlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%SxE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%SyN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-      allocate(UCellO%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-      allocate(UCellO%WlLh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-      allocate(UCellO%delh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-      allocate(UCellO%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(UCellO%Cell_Cent(Isize,Jsize,2))
-      allocate(UCellO%MsCe(Isize,Jsize,2))
-
-      allocate(VCellO%vof(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%phi(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%nx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%ny(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%vofS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%phiS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%nxS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%nyS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%EEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(VCellO%WEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(VCellO%NEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(VCellO%SEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-      allocate(VCellO%MoExCell(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-      allocate(VCellO%EtaE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%EtaN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%DAlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%DAlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%AlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%AlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%SxE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%SyN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-      allocate(VCellO%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-      allocate(VCellO%WlLh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-      allocate(VCellO%delh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-      allocate(VCellO%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(VCellO%Cell_Cent(Isize,Jsize,2))
-      allocate(VCellO%MsCe(Isize,Jsize,2))
-
-      allocate(PCellO%vof(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%phi(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%nx(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%ny(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%vofS(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%phiS(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%nxS(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%nyS(ibeg:Isize,jbeg:Jsize))
-      allocate(PCellO%EEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-      allocate(PCellO%WEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-      allocate(PCellO%NEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-      allocate(PCellO%SEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-      allocate(PCellO%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-      allocate(PCellO%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-      allocate(PCellO%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-      allocate(PCellO%Cell_Cent(Isize,Jsize,2))
-
+      call PrintWaterWave(Time%PhysT,simcomesh%PGrid,simcomesh%PCell)
+      simcomesh0 = TsimcoMesh(Isize, Jsize)
     ! Calculate threshold for MUSCL limiter
       if(RunAgain.eqv..TRUE.) then
         Write(curd,'(i8.8)') IttRun
         filename=trim(adjustl(dir))//'Tecplot/Pressure_'//trim(curd)//'.dat'
-        call ReadOldDataPCell(filename,PCell,TVar,Flux_n1)
+        call ReadOldDataPCell(filename,simcomesh%PCell,TVar,Flux_n1)
         filename=trim(adjustl(dir))//'Tecplot/Uvelocity_'//trim(curd)//'.dat'
-        call ReadOldDataVelocityCell(filename,UCell,TVar%u)
+        call ReadOldDataVelocityCell(filename,simcomesh%UCell,TVar%u)
         filename=trim(adjustl(dir))//'Tecplot/Vvelocity_'//trim(curd)//'.dat'
-        call ReadOldDataVelocityCell(filename,VCell,TVar%v)
+        call ReadOldDataVelocityCell(filename,simcomesh%VCell,TVar%v)
         filename=trim(adjustl(dir))//'Tecplot/Particles_'//trim(curd)//'.dat'
         call ReadOldDataParticle(filename,TraPar,TVar)
         filename=trim(adjustl(dir))//'Convergence.dat'
@@ -179,14 +108,14 @@ Module Solver
         BoomCase%YBar=BoomCase%Posp%y-dsqrt((BoomCase%Dobj/2.d0)**2.d0-        &
                  (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
 
-        call SolidVolumeFraction(PGrid,PCell,BoomCase)
-        call SolidVolumeFraction(UGrid,UCell,BoomCase)
-        call SolidVolumeFraction(VGrid,VCell,BoomCase)
+        call SolidVolumeFraction(simcomesh%PGrid,simcomesh%PCell,BoomCase)
+        call SolidVolumeFraction(simcomesh%UGrid,simcomesh%UCell,BoomCase)
+        call SolidVolumeFraction(simcomesh%VGrid,simcomesh%VCell,BoomCase)
 
-        call Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,IttRun)
-        call NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
+        call Grid_Preprocess(simcomesh,TVar,IttRun)
+        call NewCellFace(simcomesh)
  !       call Boundary_Condition_Var(PGrid,TVar,Time%NondiT)
-        Time%PhysT = Time%Nondit*PGrid%Lref/TVar%URef
+        Time%PhysT = Time%Nondit*simcomesh%PGrid%Lref/TVar%URef
         IttBegin=IttRun+1
 !        BoomCase%us=0.d0
 !        BoomCase%vs=0.d0
@@ -199,15 +128,15 @@ Module Solver
 !          iprint1=1
 !        end if
        ! if(itt==365) pause
-        call AdamBasforthCrankNicolson(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO, &
-                 PCell,UCell,VCell,TVar,UConv,VConv,PConv,Time,Flux_n1,TraPar, &
+        call AdamBasforthCrankNicolson(simcomesh, simcomesh0,  &
+                 TVar,UConv,VConv,PConv,Time,Flux_n1,TraPar, &
                  BoomCase,itt)
         if(mod(itt,IParInlet)==0) then
-          call ParticleInletCondition(PGrid,PCell,TraPar)
+          call ParticleInletCondition(simcomesh%PGrid,simcomesh%PCell,TraPar)
         end if
-        call TrackingParticles(PGrid,PCell,BoomCase,TVar,Time%dt,TraPar)
+        call TrackingParticles(simcomesh%PGrid,simcomesh%PCell,BoomCase,TVar,Time%dt,TraPar)
         Time%NondiT = Time%NondiT+Time%dt
-        Time%PhysT = Time%Nondit*PGrid%Lref/TVar%URef
+        Time%PhysT = Time%Nondit*simcomesh%PGrid%Lref/TVar%URef
         if(itt==1) then
           open(unit=5,file=trim(adjustl(dir))//'Convergence.dat')
           close(5,status='delete')
@@ -230,25 +159,25 @@ Module Solver
         ite = INT(itt)
         if(mod(itt,iprint1)==0)then
           write(*,*), itt,Time%PhysT,Time%NondiT
-          call Print_Result_Tecplot_PCent(PGrid,TVar,PCell,TraPar,Flux_n1,itt,1)
-          call Print_Result_Tecplot_UCent(UGrid,TVar,UCell,itt)
-          call Print_Result_Tecplot_VCent(VGrid,TVar,VCell,itt)
-          call Print_Result_VTK_2D(PGrid,TVar,PCell,itt)
+          call Print_Result_Tecplot_PCent(simcomesh%PGrid,TVar,simcomesh%PCell,TraPar,Flux_n1,itt,1)
+          call Print_Result_Tecplot_UCent(simcomesh%UGrid,TVar,simcomesh%UCell,itt)
+          call Print_Result_Tecplot_VCent(simcomesh%VGrid,TVar,simcomesh%VCell,itt)
+          call Print_Result_VTK_2D(simcomesh%PGrid,TVar,simcomesh%PCell,itt)
         end if
         if(WavePrint/=0) then
-          call PrintWaterWave(Time%PhysT,PGrid,PCell)
+          call PrintWaterWave(Time%PhysT,simcomesh%PGrid,simcomesh%PCell)
           WavePrint=0
         end if
       end do
       deallocate(GraP,Flux_n1)
     end subroutine IterationSolution
 
-    SUBROUTINE AdamBasforthCrankNicolson(PGrid,UGrid,VGrid,PCellO,UCellO,      &
-               VCellO, PCell,UCell,VCell,TVar,UConv,VConv,PConv,Time,Flux_n1,  &
+    SUBROUTINE AdamBasforthCrankNicolson(simcomesh, simcomesh0, &
+               TVar,UConv,VConv,PConv,Time,Flux_n1,  &
                TraPar,BoomCase,itt)
       IMPLICIT NONE
-      TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
-      TYPE(Cell),INTENT(INOUT):: PCellO,UCellO,VCellO,PCell,UCell,VCell
+      TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
+      TYPE(TsimcoMesh), INTENT(inout) :: simcomesh0
       TYPE(Variables),INTENT(INOUT):: TVar
       TYPE(SolverTime),INTENT(INOUT):: Time
       TYPE(Particle),INTENT(INOUT):: TraPar
@@ -260,6 +189,8 @@ Module Solver
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: SPar
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: SParU,SParV,VolPar,VolParU,VolParV
       REAL(KIND=dp):: dt,Se,ForceObj
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       if(itt==1) then
         BoomCase%us=0.d0
         BoomCase%vs=0.d0
@@ -271,10 +202,10 @@ Module Solver
       allocate(VolParU(Isize,Jsize))
       allocate(VolParV(Isize,Jsize))
       ! First Runge-Kutta substep
-      call CopyNewCell(PCellO,PCell)
-      call CopyNewCell(UCellO,UCell)
-      call CopyNewCell(VCellO,VCell)
-      call ComputeForceObject(BoomCase,PGrid,PCell,VCell,TVar,ForceObj)
+      call CopyNewCell(simcomesh0%PCell,simcomesh%PCell)
+      call CopyNewCell(simcomesh0%UCell,simcomesh%UCell)
+      call CopyNewCell(simcomesh0%VCell,simcomesh%VCell)
+      call ComputeForceObject(BoomCase,simcomesh%PGrid,simcomesh%PCell,simcomesh%VCell,TVar,ForceObj)
    !   BoomCase%asy=-(1.14d0*omew)**2.d0*Amp0*dsin(1.14d0*omew*Time%NondiT+pi/2.d0)/    &
    !                 (TVar%Uref**2.d0/Lref)
       if(RunAgain.eqv..FALSE.) then
@@ -288,29 +219,31 @@ Module Solver
         BoomCase%vs=0.d0
         BoomCase%asy=0.d0
       end if
-      call ComputeTimeStep(UGrid,VGrid,TVar,BoomCase,Time)
+      call ComputeTimeStep(simcomesh%UGrid,simcomesh%VGrid,TVar,BoomCase,Time)
       open(unit=10,file=trim(adjustl(dir))//'ObjectForce.dat',access='append')
       write(10,*),Time%NondiT,ForceObj-BoomCase%Mobj*g,BoomCase%asy,itt
       close(10)
       dt=time%dt
       if(itt>1) then
-        call Coupled_LS_VOF(PGrid,PCell,UCell,VCell,TVar,BoomCase,             &
+        call Coupled_LS_VOF(simcomesh%PGrid,simcomesh%PCell,simcomesh%UCell,simcomesh%VCell,TVar,BoomCase,             &
                                                              Time%NondiT,dt,itt)
-        call Initial_ClsVofUV(PCell,PGrid,UCell,UGrid,VolPar,SPar,VolParU,     &
+        call Initial_ClsVofUV(simcomesh%PCell,simcomesh%PGrid,simcomesh%UCell,simcomesh%UGrid,VolPar,SPar,VolParU,     &
                                                              SParU,BoomCase,0)
-        call Initial_ClsVofUV(PCell,PGrid,VCell,VGrid,VolPar,SPar,VolParV,     &
+        call Initial_ClsVofUV(simcomesh%PCell,simcomesh%PGrid,simcomesh%VCell,simcomesh%VGrid,VolPar,SPar,VolParV,     &
                                                              SParV,BoomCase,1)
-        call Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,itt)
-        call NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
-        call Boundary_Condition_Var(PGrid,PCell,TVar,Time%NondiT)
-        call InterNewVar(PCellO,UCellO,VCellO,PCell,UCell,VCell,PGrid,TVar,    &
+        call Grid_Preprocess(simcomesh,TVar,itt)
+        call NewCellFace(simcomesh)
+        call Boundary_Condition_Var(simcomesh%PGrid,simcomesh%PCell,TVar,Time%NondiT, ibeg, jbeg, Isize, Jsize)
+        call InterNewVar(simcomesh0%PCell,simcomesh0%UCell,simcomesh0%VCell,simcomesh%PCell,simcomesh%UCell,&
+             &           simcomesh%VCell,simcomesh%PGrid,TVar,    &
                                                                 BoomCase%vs)
       else
         SParU(:,:)=0.d0;SParV(:,:)=0.d0
         VolParU(:,:)=0.d0;VolParV(:,:)=0.d0
       end if
-      call UpdatePUV(UGrid,VGrid,PGrid,PCellO,UCellO,VCellO,PCell,UCell,       &
-           VCell,TVar,Flux_n1,TraPar,VolParU,VolParV,SParU,SParV,BoomCase,dt,itt)
+      call UpdatePUV(simcomesh%UGrid,simcomesh%VGrid,simcomesh%PGrid,simcomesh0%PCell,simcomesh0%UCell, &
+           &         simcomesh0%VCell,simcomesh%PCell,simcomesh%UCell,       &
+           simcomesh%VCell,TVar,Flux_n1,TraPar,VolParU,VolParV,SParU,SParV,BoomCase,dt,itt)
       ! Calculate the three kind of norm for convergence
       deallocate(SPar)
       deallocate(SParU,SParV)
@@ -325,6 +258,8 @@ Module Solver
       TYPE(SolidObject),INTENT(IN):: BoomCase
       TYPE(SolverTime),INTENT(OUT):: Time
       INTEGER(kind=it4b):: i,j
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       Time%dt = 1.d0
       do j = jbeg,jbeg+Jsize-1
         do i = ibeg,ibeg+Isize-1
@@ -365,6 +300,8 @@ Module Solver
        REAL(KIND=dp),intent(in):: vb
        INTEGER(KIND=it4b):: i,j,ii,jj,temp
        REAL(KIND=dp):: Pu,Pv,SumP,vfa,uleft,uright,vbot,vtop
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        do i = ibeg,ibeg+Isize-1
          do j = jbeg,jbeg+Jsize-1
            ! For pressure cell
@@ -520,6 +457,8 @@ Module Solver
       TYPE(Cell),INTENT(IN):: PCell
       INTEGER(kind=it4b):: j
       REAL(KIND=dp):: H1,H2,H3,H4
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do j = 1,Jsize
         if(PCell%vof(I1,j)>epsi.and.PCell%vof(I1,j)<1.d0-epsi) then
           H1 = PGrid%y(I1,j)+(PCell%vof(I1,j)-0.5d0)*PGrid%dy(I1,j)
@@ -547,6 +486,8 @@ Module Solver
       INTEGER(kind=it4b):: i,j
       character(len=250):: curd
       REAL(KIND=dp):: VolPrint,XPrint,HPrint,tol,Hmax
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
 
       tol=1.d-24
       write(curd,'(f15.8)') TimePrint
@@ -582,6 +523,8 @@ Module Solver
       INTEGER(kind=it4b),INTENT(IN):: J1,J2,J3,J4
       TYPE(Variables),INTENT(IN):: Var
       REAL(KIND=dp):: P1,P2,P3,P4
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       P1=Var%p(Isize,J1)
       P2=Var%p(Isize,J2)
       P3=Var%p(Isize,J3)
@@ -597,6 +540,8 @@ Module Solver
       TYPE(Cell),INTENT(IN):: TCellTa
       TYPE(Cell),INTENT(INOUT):: TCellCo
       INTEGER(kind=it4b):: i,j
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           TCellCo%vof(i,j)=TCellTa%vof(i,j)

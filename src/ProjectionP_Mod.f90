@@ -40,6 +40,8 @@ Module ProjectionP
       REAL(KIND=dp):: final_res_norm,tol,resi
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: matr
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: rhm
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(matr(Isize,Jsize,5))
       allocate(rhm(Isize,Jsize))
       allocate(PoCoef(Isize,Jsize,4)) ! the order of the face: S-1;W-2,E-3,N-4
@@ -147,6 +149,8 @@ Module ProjectionP
       REAL(KIND=dp):: values(0:4)
       REAL(KIND=dp):: dx,dy,test,nesu,diag,tol,mindiag
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: matr
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       ilower = 0
       iupper = PCell%ExtCell
       tol = 1.d-24
@@ -285,6 +289,8 @@ Module ProjectionP
         INTEGER(kind=it4b),DIMENSION(:),allocatable:: rows
         REAL(KIND=dp),DIMENSION(:),allocatable:: rhs,xval
         REAL(KIND=dp),DIMENSION(:,:),allocatable:: ExtFlux,rhm
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         ilower = 0
         iupper = PCell%ExtCell
         local_size = iupper-ilower+1 ! the number of rows
@@ -361,6 +367,8 @@ Module ProjectionP
         INTEGER(kind=it4b):: ilower,iupper,local_size,ctr
         INTEGER(kind=it4b),DIMENSION(:),allocatable:: rows
         REAL(KIND=dp),DIMENSION(:),allocatable:: values
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         ilower = 0
         iupper = PCell%ExtCell
         local_size = PCell%ExtCell+1 ! number of element
@@ -400,6 +408,8 @@ Module ProjectionP
         TYPE(PoissonCoefficient),INTENT(IN):: PU,PV
         REAL(KIND=dp):: BetaP,BetaM,BetaW,BetaD,Lamda,tol
         INTEGER(kind=it4b):: i,j
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       ! Set Coefficient for W,E,S,N
         tol=1.d-24
         BetaP = 1.d0/(row/Roref)
@@ -584,6 +594,8 @@ Module ProjectionP
         TYPE(Projection),INTENT(INOUT):: Proj
         INTEGER(kind=it4b),INTENT(IN):: WB,EB,SB,NB
         INTEGER(kind=it4b):: i,j
+        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         Do i = ibeg,ibeg+Isize-1
           Proj%Pp(i,jbeg-1) = dble(SB)*Proj%Pp(i,jbeg)
           Proj%Pp(i,jbeg+Jsize) = dble(NB)*Proj%Pp(i,jbeg+Jsize-1)

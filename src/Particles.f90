@@ -3,6 +3,7 @@ Module Particles
   USE MPI
   USE Mesh
   USE StateVariables
+  USE Constants, ONLY : pi
   USE Clsvof,ONLY: vofeps,SolidObject
   PRIVATE
   INTEGER(kind=it4b),PARAMETER:: itp=10
@@ -44,6 +45,8 @@ Module Particles
     INTEGER:: i
     REAL(KIND=dp):: DragFC
     REAL(KIND=dp),DIMENSION(:),allocatable:: ranum
+    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+    call getMeshSizes(ibeg, jbeg, Isize, Jsize)
     allocate(ranum(TraPar%np))
     call Random_Number(ranum)
     DragFC=18.d0
@@ -81,6 +84,8 @@ Module Particles
     TYPE(Point),DIMENSION(:),allocatable:: xyp
     REAL(KIND=dp):: dudx,dvdy,ug,vg,ug0,vg0,VRel,Reyp,Cd
     REAL(KIND=dp):: tp,FXT,EXPT,Spx,Spy,dtp,gama,nupp,ropp,beta,sig
+    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+    call getMeshSizes(ibeg, jbeg, Isize, Jsize)
     allocate(Upo(TraPar%np))
     allocate(Vpo(TraPar%np))
     allocate(Upn(TraPar%np))

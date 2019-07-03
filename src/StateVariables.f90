@@ -1,13 +1,11 @@
 Module StateVariables
     USE PrecisionVar
+    USE Constants, ONLY : g
     USE Mesh
     IMPLICIT NONE
     PRIVATE
     INTEGER(kind=it4b),PUBLIC::ight=1,jght=1
     INTEGER(kind=it4b),PUBLIC::ite
-    TYPE(Point),PUBLIC:: Start_Point,End_Point
-    REAL(KIND=dp),PARAMETER,PUBLIC::pi=4.d0*datan(1.d0),Cp=1.005d3,            &
-                                    kT=0.0271d0,kTw=0.0271d0,g = 9.81d0,factor=0.5d0
     REAL(KIND=dp),PUBLIC::Lref,Rey,Fr,wa,Ta,xc,yc,UwInlet,UgInlet,             &
                           xmax,Roref,Hw,Ha,VofInlet,nuref
 !   for run again from
@@ -38,12 +36,13 @@ Module StateVariables
       module procedure Boundary_Condition_Var
     end interface Boundary_Condition_Var
     contains
-    subroutine Initial_Var(PCell,PGrid,Vari,Uint,Vint,Pint,Tint,Uref,Tref,Roref,Lref)
+    subroutine Initial_Var(simcomesh, PCell,PGrid,Vari,Uint,Vint,Pint,Tint,Uref,Tref,Roref,Lref)
       REAL(KIND=dp),INTENT(IN):: Uint,Vint,Pint,Tint,Uref,Tref,Roref,Lref
+      TYPE(TsimcoMesh), INTENT(in) :: simcomesh
       TYPE(Cell),INTENT(IN):: PCell
       TYPE(Grid),INTENT(IN):: PGrid
       TYPE(Variables),INTENT(INOUT):: Vari
-      INTEGER(kind=it4b):: i,j
+      INTEGER(kind=it4b):: i,j, ibeg, jbeg, Isize, Jsize
       REAL(KIND=dp):: Hwt0,xu0,Amp,cw,tw,delta,xwu,xwv,ywu,ywv
       Vari%Uint = Uint
       Vari%Vint = Vint
@@ -53,6 +52,7 @@ Module StateVariables
       Vari%Roref = Roref
       Vari%Pref = Roref*Uref**2.d0
       Vari%Tref = Tref
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,Isize+ibeg-1
         do j = jbeg,Jsize+jbeg-1
         ! for sinusoidal wave
@@ -114,11 +114,12 @@ Module StateVariables
     !      __________Slip Wall_____
     !
     !*******************************************************
-    subroutine Boundary_Condition_Var(PGrid,PCell,Vari,Time)
+    subroutine Boundary_Condition_Var(PGrid,PCell,Vari,Time, ibeg, jbeg, Isize, Jsize)
       TYPE(Grid),INTENT(IN):: PGrid
       TYPE(Cell),INTENT(IN):: PCell
       TYPE(Variables),INTENT(INOUT):: Vari
       REAL(KIND=dp),INTENT(IN):: Time
+      INTEGER(it4b), INTENT(in) :: ibeg, jbeg, Isize, Jsize
       INTEGER(kind=it4b):: i,j,temp
       REAL(KIND=dp),PARAMETER:: Twall = 300.d0
       REAL(KIND=dp):: ywu,ywv,xwu,xwv,ywuout,ywvout,xwuout,xwvout,            &

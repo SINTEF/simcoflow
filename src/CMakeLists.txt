@@ -24,6 +24,7 @@ list(APPEND SRC_LIST
     ProjectionP_Mod.f90 
     ComputePUV_Mod.f90
     StateVariables.f90 
+    Constants.f90
     Main.f90)
 set (LINK_LIBS ${LINK_LIBS} 
     ${MPI_Fortran_LIBRARIES}
