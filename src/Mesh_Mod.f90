@@ -3,9 +3,9 @@ Module Mesh
     USE MPI
     IMPLICIT NONE
     PRIVATE
-    INTEGER(kind=it4b),PUBLIC::ight=1,jght=1
-    INTEGER(kind=it4b),PRIVATE:: ibeg=1,jbeg=1
-    INTEGER(kind=it4b),PRIVATE:: Isize,Jsize
+    INTEGER(kind=it4b),PRIVATE :: ight=1,jght=1
+    INTEGER(kind=it4b),PRIVATE :: ibeg=1,jbeg=1
+    INTEGER(kind=it4b),PRIVATE :: Isize,Jsize
     TYPE,PUBLIC:: Point
       REAL(KIND=dp)::x,y
     End TYPE Point
@@ -175,13 +175,15 @@ Module Mesh
         allocate(this%PCell%Cell_Cent(Isize,Jsize,2))
 
       end function construct
-      Subroutine getMeshSizes(ibege, jbege, Isizee, Jsizee)
-        INTEGER(it4b), INTENT(out) :: ibege, jbege, Isizee, Jsizee
+      Subroutine getMeshSizes(ibege, jbege, Isizee, Jsizee, ighte, jghte)
+        INTEGER(it4b), OPTIONAL,INTENT(out) :: ibege, jbege, Isizee, Jsizee, ighte, jghte
         !
-        ibege  = ibeg
-        jbege  = jbeg
-        Isizee = Isize
-        Jsizee = Jsize
+        IF(PRESENT(ibege))  ibege  = ibeg
+        IF(PRESENT(jbege))  jbege  = jbeg
+        IF(PRESENT(Isizee)) Isizee = Isize
+        IF(PRESENT(Jsizee)) Jsizee = Jsize
+        IF(PRESENT(ighte))  ighte  = ight
+        IF(PRESENT(jghte))  jghte  = jght
       end Subroutine getMeshSizes
 
 !      Subroutine Initial_Grid(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,   &

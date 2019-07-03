@@ -33,8 +33,8 @@ Module ComputePUV
       REAL(KIND=dp):: dps
       REAL(KIND=dp):: BetaP,BetaM,BetaW,BetaD,Yint,Hjump,Lamda,tol
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: GradPUV
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
       allocate(Pred%u(ibeg-ight:ibeg+ight+Isize-1,jbeg-jght:jbeg+jght+Jsize-1))
       allocate(Pred%v(ibeg-ight:ibeg+ight+Isize-1,jbeg-jght:jbeg+jght+Jsize-1))
       allocate(Proj%Pp(ibeg-ight:ibeg+ight+Isize-1,jbeg-jght:jbeg+jght+Jsize-1))

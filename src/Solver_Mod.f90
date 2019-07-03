@@ -233,7 +233,7 @@ Module Solver
                                                              SParV,BoomCase,1)
         call Grid_Preprocess(simcomesh,TVar,itt)
         call NewCellFace(simcomesh)
-        call Boundary_Condition_Var(simcomesh%PGrid,simcomesh%PCell,TVar,Time%NondiT, ibeg, jbeg, Isize, Jsize)
+        call Boundary_Condition_Var(simcomesh%PGrid,simcomesh%PCell,TVar,Time%NondiT)
         call InterNewVar(simcomesh0%PCell,simcomesh0%UCell,simcomesh0%VCell,simcomesh%PCell,simcomesh%UCell,&
              &           simcomesh%VCell,simcomesh%PGrid,TVar,    &
                                                                 BoomCase%vs)

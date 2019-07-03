@@ -113,16 +113,17 @@ Module StateVariables
     !      __________Slip Wall_____
     !
     !*******************************************************
-    subroutine Boundary_Condition_Var(PGrid,PCell,Vari,Time, ibeg, jbeg, Isize, Jsize)
+    subroutine Boundary_Condition_Var(PGrid,PCell,Vari,Time)
       TYPE(Grid),INTENT(IN):: PGrid
       TYPE(Cell),INTENT(IN):: PCell
       TYPE(Variables),INTENT(INOUT):: Vari
       REAL(KIND=dp),INTENT(IN):: Time
-      INTEGER(it4b), INTENT(in) :: ibeg, jbeg, Isize, Jsize
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
       INTEGER(kind=it4b):: i,j,temp
       REAL(KIND=dp),PARAMETER:: Twall = 300.d0
       REAL(KIND=dp):: ywu,ywv,xwu,xwv,ywuout,ywvout,xwuout,xwvout,            &
                       Hwin,Hwout,Hain,Haout
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
       temp=0
       do j=1,Jsize
         if(PCell%vof(1,j)>epsi) Hwin=PGrid%y(1,j)-                             &

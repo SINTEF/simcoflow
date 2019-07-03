@@ -60,8 +60,8 @@ Module PredictorUV
       REAL(KIND=dp):: BetaP,BetaM,BetaW,Lamda,Fluxn0
   !   for particle tracking
       REAL(KIND=dp):: nupp,ropp,ug,vg,Reyp,Cd,mp,tp,Vrel
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
       allocate(MaFluxEW(ibeg:Isize+1,jbeg:Jsize,2))
       allocate(MaFluxNS(ibeg:Isize,jbeg:Jsize+1,2))
       allocate(VofFluxEW(ibeg:Isize+1,jbeg:Jsize,2))

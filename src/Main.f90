@@ -30,8 +30,8 @@ Program Main
     INTEGER(kind=it4b):: Irec,Jrec,NI,NJ,iprint
     REAL(KIND=dp):: vel,Uref,Vint
     TYPE(TsimcoMesh) :: simcomesh
-    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-    call getMeshSizes(ibeg, jbeg, Isize, Jsize) !Isize and Jsize are overwritten by user
+    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
+    call getMeshSizes(ibeg, jbeg, ighte=ight, jghte=jght)
     open(unit=5,file='input.dat',action='read')
     read(5,*),
     read(5,*), Isize, Jsize, Irec, Jrec, Rey, Hw, iprint
