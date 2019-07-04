@@ -7,6 +7,7 @@ Module ProjectionP
     USE Mesh
     USE Cutcell
     USE StateVariables
+    USE Constants, ONLY : epsi, roa, row
     USE PredictorUV
     USE MPI
     IMPLICIT NONE
@@ -28,7 +29,7 @@ Module ProjectionP
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       TYPE(Cell),INTENT(IN):: PCellO,PCell,UCell,VCell
-      TYPE(Variables),INTENT(IN),target:: TVar
+      TYPE(TVariables),INTENT(IN),target:: TVar
       TYPE(Predictor),INTENT(IN),target:: TPred
       TYPE(Projection),INTENT(INOUT),target:: Proj
       TYPE(PoissonCoefficient),INTENT(IN):: PU,PV

@@ -3,9 +3,9 @@ Module PredictorUV
     USE Mesh
     USE Cutcell
     USE Clsvof
-    USE StateVariables, ONLY : Variables, epsi, nua, nuref, nuw, rey, roa, roref, row, fr, betavis, rop, UParInlet, &
+    USE StateVariables, ONLY : TVariables, nuref, rey, roref, fr, rop, UParInlet, &
         &                      zp
-    USE Constants, ONLY : pi
+    USE Constants, ONLY : pi, epsi, nua, nuw, roa, row, BetaVis
     USE Printresult
     USE MPI
     USE Particles
@@ -35,7 +35,7 @@ Module PredictorUV
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       TYPE(Cell),INTENT(IN):: PCell,PCellO
       TYPE(Cell),INTENT(IN),target:: UCell,VCell,UCellO,VCellO
-      TYPE(Variables),INTENT(IN),target:: TVar
+      TYPE(TVariables),INTENT(IN),target:: TVar
       TYPE(Predictor),INTENT(INOUT):: Pred
       TYPE(PoissonCoefficient),INTENT(INOUT):: PU,PV
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
@@ -2228,7 +2228,7 @@ Module PredictorUV
     subroutine PredictorVelocityBoundaryCondition(Pred,TVar)
       IMPLICIT NONE
       TYPE(Predictor),INTENT(INOUT):: Pred
-      TYPE(Variables),INTENT(IN):: TVar
+      TYPE(TVariables),INTENT(IN):: TVar
       REAL(KIND=dp),PARAMETER:: Twall = 300.d0
       INTEGER(kind=it4b):: i,j
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize

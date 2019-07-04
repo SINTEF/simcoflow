@@ -2,7 +2,7 @@ Module Solver
     USE PrecisionVar
     USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Grid, Cell, Point
     USE StateVariables
-    USE Constants, ONLY : g
+    USE Constants, ONLY : g, epsi
     USE CutCell
     USE Clsvof
     USE PrintResult
@@ -28,11 +28,12 @@ Module Solver
       Module Procedure IterationSolution
     End Interface IterationSolution
     Contains
-    subroutine IterationSolution(simcomesh, TVar,     &
+    subroutine IterationSolution(simcomesh, TVar, wave,    &
                                  TraPar,BoomCase,iprint)
       IMPLICIT NONE
       TYPE(TsimcoMesh) , INTENT(inout) :: simcomesh
-      TYPE(Variables),INTENT(INOUT):: TVar
+      TYPE(TVariables),INTENT(INOUT):: TVar
+      TYPE(TWave), INTENT(in) :: wave
       INTEGER(kind=it4b),INTENT(IN):: iprint
       TYPE(Particle),INTENT(INOUT):: TraPar
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
@@ -42,7 +43,7 @@ Module Solver
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: Flux_n1
       TYPE(SolverTime):: Time
       TYPE(SolverConvergence):: UConv,VConv,PConv
-      TYPE(Variables):: TVar_n
+      TYPE(TVariables):: TVar_n
       INTEGER(kind=it4b):: iprint1,i,j
       INTEGER(kind=it8b):: itt,tempvel
       REAL(KIND=dp):: velaver,timeb
@@ -129,10 +130,10 @@ Module Solver
 !        end if
        ! if(itt==365) pause
         call AdamBasforthCrankNicolson(simcomesh, simcomesh0,  &
-                 TVar,UConv,VConv,PConv,Time,Flux_n1,TraPar, &
+                 wave, TVar,UConv,VConv,PConv,Time,Flux_n1,TraPar, &
                  BoomCase,itt)
         if(mod(itt,IParInlet)==0) then
-          call ParticleInletCondition(simcomesh%PGrid,simcomesh%PCell,TraPar)
+          call ParticleInletCondition(simcomesh%PGrid,simcomesh%PCell,wave, TraPar)
         end if
         call TrackingParticles(simcomesh%PGrid,simcomesh%PCell,BoomCase,TVar,Time%dt,TraPar)
         Time%NondiT = Time%NondiT+Time%dt
@@ -172,13 +173,14 @@ Module Solver
       deallocate(GraP,Flux_n1)
     end subroutine IterationSolution
 
-    SUBROUTINE AdamBasforthCrankNicolson(simcomesh, simcomesh0, &
+    SUBROUTINE AdamBasforthCrankNicolson(simcomesh, simcomesh0, wave, &
                TVar,UConv,VConv,PConv,Time,Flux_n1,  &
                TraPar,BoomCase,itt)
       IMPLICIT NONE
       TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
       TYPE(TsimcoMesh), INTENT(inout) :: simcomesh0
-      TYPE(Variables),INTENT(INOUT):: TVar
+      TYPE(TWave), INTENT(in)         :: wave
+      TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(SolverTime),INTENT(INOUT):: Time
       TYPE(Particle),INTENT(INOUT):: TraPar
       TYPE(SolverConvergence),INTENT(OUT):: UConv,VConv,PConv
@@ -225,7 +227,7 @@ Module Solver
       close(10)
       dt=time%dt
       if(itt>1) then
-        call Coupled_LS_VOF(simcomesh%PGrid,simcomesh%PCell,simcomesh%UCell,simcomesh%VCell,TVar,BoomCase,             &
+        call Coupled_LS_VOF(simcomesh%PGrid,simcomesh%PCell,simcomesh%UCell,simcomesh%VCell,TVar,wave, BoomCase,       &
                                                              Time%NondiT,dt,itt)
         call Initial_ClsVofUV(simcomesh%PCell,simcomesh%PGrid,simcomesh%UCell,simcomesh%UGrid,VolPar,SPar,VolParU,     &
                                                              SParU,BoomCase,0)
@@ -233,7 +235,7 @@ Module Solver
                                                              SParV,BoomCase,1)
         call Grid_Preprocess(simcomesh,TVar,itt)
         call NewCellFace(simcomesh)
-        call Boundary_Condition_Var(simcomesh%PGrid,simcomesh%PCell,TVar,Time%NondiT)
+        call Boundary_Condition_Var(simcomesh%PGrid,simcomesh%PCell,TVar,wave, Time%NondiT)
         call InterNewVar(simcomesh0%PCell,simcomesh0%UCell,simcomesh0%VCell,simcomesh%PCell,simcomesh%UCell,&
              &           simcomesh%VCell,simcomesh%PGrid,TVar,    &
                                                                 BoomCase%vs)
@@ -254,7 +256,7 @@ Module Solver
     SUBROUTINE ComputeTimeStep(UGrid,VGrid,TVar,BoomCase,Time)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: UGrid,VGrid
-      TYPE(Variables),INTENT(IN):: TVar
+      TYPE(TVariables),INTENT(IN):: TVar
       TYPE(SolidObject),INTENT(IN):: BoomCase
       TYPE(SolverTime),INTENT(OUT):: Time
       INTEGER(kind=it4b):: i,j
@@ -295,7 +297,7 @@ Module Solver
     SUBROUTINE InterNewVar(PCellO,UCellO,VCellO,PCell,UCell,VCell,PGrid,TVar,vb)
        IMPLICIT NONE
        TYPE(Cell),INTENT(IN):: PCellO,UCellO,VCellO,PCell,UCell,VCell
-       TYPE(Variables),INTENT(INOUT):: TVar
+       TYPE(TVariables),INTENT(INOUT):: TVar
        TYPE(Grid),INTENT(IN):: PGrid
        REAL(KIND=dp),intent(in):: vb
        INTEGER(KIND=it4b):: i,j,ii,jj,temp
@@ -521,7 +523,7 @@ Module Solver
     SUBROUTINE PrintWaterPressure(NonTime,J1,J2,J3,J4,Var)
       REAL(KIND=dp),INTENT(IN):: NonTime
       INTEGER(kind=it4b),INTENT(IN):: J1,J2,J3,J4
-      TYPE(Variables),INTENT(IN):: Var
+      TYPE(TVariables),INTENT(IN):: Var
       REAL(KIND=dp):: P1,P2,P3,P4
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
@@ -591,7 +593,7 @@ Module Solver
 
 !    SUBROUTINE WaveBoundaryCondition(PGrid,Vari,Time)
 !      TYPE(Grid),INTENT(IN):: PGrid
-!      TYPE(Variables),INTENT(INOUT):: Vari
+!      TYPE(TVariables),INTENT(INOUT):: Vari
 !      TYPE(SolverTime),INTENT(IN):: Time
 !      INTEGER(kind=it8b):: i,j
 !      REAL(KIND=dp):: etau,etav

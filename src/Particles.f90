@@ -3,7 +3,7 @@ Module Particles
   USE MPI
   USE Mesh
   USE StateVariables
-  USE Constants, ONLY : pi
+  USE Constants, ONLY : pi, epsi, nua, nuw, roa, row
   USE Clsvof,ONLY: vofeps,SolidObject
   PRIVATE
   INTEGER(kind=it4b),PARAMETER:: itp=10
@@ -40,7 +40,7 @@ Module Particles
   Subroutine InitializeParticles(Pgrid,Var,TraPar)
     IMPLICIT NONE
     TYPE(Grid),INTENT(IN):: PGrid
-    TYPE(Variables),INTENT(IN):: Var
+    TYPE(TVariables),INTENT(IN):: Var
     TYPE(Particle),INTENT(INOUT):: TraPar
     INTEGER:: i
     REAL(KIND=dp):: DragFC
@@ -76,7 +76,7 @@ Module Particles
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(Cell),INTENT(IN):: PCell
     TYPE(SolidObject),INTENT(INOUT):: BoomCase
-    TYPE(Variables),INTENT(IN):: Var
+    TYPE(TVariables),INTENT(IN):: Var
     REAL(KIND=dp),INTENT(IN):: dt
     TYPE(Particle),INTENT(INOUT):: TraPar
     INTEGER(kind=it4b):: i,ii,jj,itep
@@ -253,10 +253,11 @@ Module Particles
     end do
   End subroutine ParticlePosition
 
-  Subroutine ParticleInletCondition(PGrid,PCell,TraPar)
+  Subroutine ParticleInletCondition(PGrid,PCell,wave,TraPar)
     IMPLICIT NONE
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(Cell),INTENT(IN):: PCell
+    TYPE(TWave), INTENT(in) :: wave
     TYPE(Particle),INTENT(INOUT):: TraPar
     INTEGER(KIND=it4b):: i,j
     REAL(KIND=dp),DIMENSION(:),allocatable:: ranum
@@ -268,7 +269,7 @@ Module Particles
     call Random_Number(ranum)
     do i=TraPar%np+1,TraPar%np+NParInlet
       TraPar%Posp(i)%x=PGrid%x(1,1)+PGrid%dx(1,1)/3.d0
-      TraPar%Posp(i)%y=Depthw-Amp0*2.d0-HParInlet*ranum(i-TraPar%np)
+      TraPar%Posp(i)%y=wave%Depthw-wave%Amp0*2.d0-HParInlet*ranum(i-TraPar%np)
     end do
     call Random_Number(ranum)
     do i=TraPar%np+1,TraPar%np+NParInlet

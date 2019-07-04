@@ -1,9 +1,9 @@
 Module PrintResult
     USE PrecisionVar
     USE Mesh
-    USE StateVariables, ONLY : variables,rey,xc,yc, &
-                               roa,row,Fr,roref,Lref,dir
-    USE Constants, ONLY : pi, Ktw
+    USE StateVariables, ONLY : TVariables,rey,xc,yc, &
+                               Fr,roref,Lref,dir
+    USE Constants, ONLY : pi, Ktw, roa, row
     USE Clsvof
     USE Cutcell
     USE VTK
@@ -40,7 +40,7 @@ Module PrintResult
     Subroutine Print_Result_Tecplot_PCent(TGrid,TVar,TCell,TraPar,FluxP,iter,PriPar)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: TGrid
-      TYPE(Variables),INTENT(INOUT):: TVar
+      TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(Cell),INTENT(IN):: TCell
       TYPE(Particle),INTENT(IN):: TraPar
       REAL(KIND=dp),INTENT(IN),DIMENSION(:,:,:),ALLOCATABLE:: FluxP
@@ -116,7 +116,7 @@ Module PrintResult
     Subroutine Print_Result_Tecplot_UCent(TGrid,TVar,TCell,itt)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: TGrid
-      TYPE(Variables),INTENT(IN):: TVar
+      TYPE(TVariables),INTENT(IN):: TVar
       TYPE(Cell),INTENT(IN):: TCell
       INTEGER(kind=it8b),INTENT(IN):: itt
       INTEGER(kind=it4b) i,j
@@ -144,7 +144,7 @@ Module PrintResult
     Subroutine Print_Result_Tecplot_VCent(TGrid,TVar,TCell,itt)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: TGrid
-      TYPE(Variables),INTENT(IN):: TVar
+      TYPE(TVariables),INTENT(IN):: TVar
       TYPE(Cell),INTENT(IN):: TCell
       INTEGER(kind=it8b),INTENT(IN):: itt
       INTEGER(kind=it4b) i,j
@@ -172,7 +172,7 @@ Module PrintResult
     subroutine Print_Result_VTK_2D(TGrid,TVar,TCell,itt)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: TGrid
-      TYPE(Variables),INTENT(IN):: TVar
+      TYPE(TVariables),INTENT(IN):: TVar
       TYPE(Cell),INTENT(IN):: TCell
       INTEGER(kind=it8b),INTENT(IN):: itt
       TYPE(VTR_file_handle):: fd
@@ -201,7 +201,7 @@ Module PrintResult
     SUBROUTINE ReadOldDataPCell(filename,TCell,TVar,FluxP)
       IMPLICIT NONE
       CHARACTER(LEN=80),INTENT(IN):: filename
-      TYPE(Variables),INTENT(INOUT):: TVar
+      TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(Cell),INTENT(INOUT):: TCell
       REAL(KIND=dp),INTENT(INOUT),DIMENSION(:,:,:),ALLOCATABLE:: FluxP
       INTEGER(KIND=it4b):: i,j
@@ -261,7 +261,7 @@ Module PrintResult
       IMPLICIT NONE
       CHARACTER(LEN=80),INTENT(IN):: filename
       TYPE(Particle),INTENT(INOUT):: TraPar
-      TYPE(Variables)             :: TVar
+      TYPE(TVariables)             :: TVar
       INTEGER(KIND=it4b)          :: i,j
       CHARACTER(LEN=20)           :: read1,read2,read3,read4,read5
       open(unit=5,file=filename,action='read')

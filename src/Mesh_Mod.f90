@@ -58,8 +58,8 @@ Module Mesh
     END TYPE TsimcoMesh
 
 !    PUBLIC:: Initial_Grid,HYPRE_CreateGrid,InitialUVGrid
-!    Interface Initial_Grid
-!      Module procedure Initial_Grid
+!    Interface Initial_Grid2
+!      Module procedure Initial_Grid2
 !    End interface
 !    Interface HYPRE_CreateGrid
 !      Module procedure HYPRE_CreateGrid

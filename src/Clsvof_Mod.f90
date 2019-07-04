@@ -2,7 +2,9 @@ Module Clsvof
     USE PrecisionVar
     USE Mesh
     USE Cutcell
+!    USE StateVariables, ONLY : TVariables, TWave
     USE StateVariables
+    USE Constants, ONLY : epsi, epsiF
     IMPLICIT NONE
     PRIVATE
     INTEGER,PARAMETER:: band_width = 4,nv = 10,nl = 5
@@ -35,10 +37,11 @@ Module Clsvof
       Module procedure SolidVolumeFraction
     End interface
     Contains
-    SUBROUTINE Initial_Clsvof(TGrid,TCell,BoomCase)
+    SUBROUTINE Initial_Clsvof(TGrid,TCell,BoomCase, wave)
       TYPE(Grid),INTENT(IN):: TGrid
       TYPE(Cell),INTENT(INOUT),target:: TCell
       TYPE(SolidObject),INTENT(IN):: BoomCase
+      TYPE(TWave), INTENT(in)     :: wave
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: dx,dy,dis,vol
       REAL(KIND=dp):: dx2,dy2,tol,fx,dfx
@@ -72,10 +75,10 @@ Module Clsvof
           templ=1
           dx2=TGrid%dx(i,j)/2.d0
           dy2=TGrid%dy(i,j)/2.d0
-          dpt(1)=TGrid%y(i,j)-dy2-Depthw-Amp0*dsin(kw*(TGrid%x(i,j)+dx2))
-          dpt(2)=TGrid%y(i,j)-dy2-Depthw-Amp0*dsin(kw*(TGrid%x(i,j)-dx2))
-          dpt(3)=TGrid%y(i,j)+dy2-Depthw-Amp0*dsin(kw*(TGrid%x(i,j)-dx2))
-          dpt(4)=TGrid%y(i,j)+dy2-Depthw-Amp0*dsin(kw*(TGrid%x(i,j)+dx2))
+          dpt(1)=TGrid%y(i,j)-dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(i,j)+dx2))
+          dpt(2)=TGrid%y(i,j)-dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(i,j)-dx2))
+          dpt(3)=TGrid%y(i,j)+dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(i,j)-dx2))
+          dpt(4)=TGrid%y(i,j)+dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(i,j)+dx2))
           if(dpt(1)>=0.d0) then
           node(temp,1)=dx2
           node(temp,2)=-dy2
@@ -86,8 +89,8 @@ Module Clsvof
                                           (dabs(dpt(2))+dabs(dpt(1)))
             tol=1.d0
             do while(tol>1.d-12)
-              fx=TGrid%y(i,j)-dy2-(Depthw+Amp0*dsin(kw*(node(temp,1))))
-              dfx=-Amp0*kw*dcos(kw*(node(temp,1)))
+              fx=TGrid%y(i,j)-dy2-(wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1))))
+              dfx=-wave%Amp0*wave%kw*dcos(wave%kw*(node(temp,1)))
               tol=dabs(fx/dfx)
               node(temp,1)=node(temp,1)-fx/dfx
             end do
@@ -105,7 +108,7 @@ Module Clsvof
           end if
           if(dpt(2)*dpt(3)<0.d0) then
             node(temp,1)=-dx2
-            node(temp,2)=Depthw+Amp0*dsin(kw*(node(temp,1)+TGrid%x(i,j)))-     &
+            node(temp,2)=wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1)+TGrid%x(i,j)))-     &
                                                            TGrid%y(i,j)
             CutP(templ,1)=node(temp,1)
             CutP(templ,2)=node(temp,2)
@@ -122,8 +125,8 @@ Module Clsvof
                                          (dabs(dpt(3))+dabs(dpt(4)))
             tol=1.d0
             do while(tol>1.d-13)
-              fx=TGrid%y(i,j)+dy2-(Depthw+Amp0*dsin(kw*(node(temp,1))))
-              dfx=-Amp0*kw*dcos(kw*(node(temp,1)))
+              fx=TGrid%y(i,j)+dy2-(wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1))))
+              dfx=-wave%Amp0*wave%kw*dcos(wave%kw*(node(temp,1)))
               tol=dabs(fx/dfx)
               node(temp,1)=node(temp,1)-fx/dfx
             end do
@@ -141,7 +144,7 @@ Module Clsvof
           end if
           if(dpt(4)*dpt(1)<0.d0) then
             node(temp,1)=dx2
-            node(temp,2)=Depthw+Amp0*dsin(kw*(node(temp,1)+TGrid%x(i,j)))-     &
+            node(temp,2)=wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1)+TGrid%x(i,j)))-     &
                                                            TGrid%y(i,j)
             CutP(templ,1)=node(temp,1)
             CutP(templ,2)=node(temp,2)
@@ -158,7 +161,7 @@ Module Clsvof
           if(templ==3) then
             nxx=CutP(2,2)-CutP(1,2)
             nyy=CutP(2,1)-CutP(1,1)
-            vos=-Amp0*cw0*kw*dcos(kw*(TGrid%x(i,j)+TGrid%dx(i,j)))
+            vos=-wave%Amp0*wave%cw0*wave%kw*dcos(wave%kw*(TGrid%x(i,j)+TGrid%dx(i,j)))
             nxy=dsqrt(nxx**2.d0+nyy**2.d0)
             if(vos>0.d0) then
               nxx=-nxx/nxy
@@ -169,7 +172,7 @@ Module Clsvof
             dis=dabs(CutP(2,1)*CutP(1,2)-CutP(1,1)*CutP(2,2))/nxy*             &
                                                    dsign(1.d0,0.5d0-vol)
           else
-            dis=TGrid%y(i,j)-(Depthw+Amp0*dsin(kw*(TGrid%x(i,j))))
+            dis=TGrid%y(i,j)-(wave%Depthw+wave%Amp0*dsin(wave%kw*(TGrid%x(i,j))))
             nxx=0.d0
             nyy=1.d0
           end if
@@ -730,12 +733,13 @@ Module Clsvof
 !***********************************************************
 ! Coupled level set and volume of fluid
 !***********************************************************
-    subroutine Coupled_LS_VOF(PGrid,PCell,UCell,VCell,TVar,BoomCase,NondiT,dt,itt)
+    subroutine Coupled_LS_VOF(PGrid,PCell,UCell,VCell,TVar,wave, BoomCase,NondiT,dt,itt)
        IMPLICIT NONE
        TYPE(Grid),INTENT(IN):: PGrid
        TYPE(Cell),INTENT(IN):: UCell,VCell
        TYPE(Cell),INTENT(INOUT),target:: PCell
-       TYPE(Variables),INTENT(IN):: TVar
+       TYPE(TVariables),INTENT(IN):: TVar
+       TYPE(TWave), INTENT(in) :: wave
        TYPE(SolidObject),INTENT(INOUT):: BoomCase
        REAL(KIND=dp),INTENT(IN):: dt,NondiT
        INTEGER(kind=it8b),INTENT(IN):: itt
@@ -805,7 +809,7 @@ Module Clsvof
            temvfx(:,:) = vfl(:,:)
            temlsx(:,:) = phi(:,:)
            UpdateNorVec=1
-           call X_Sweep(PGrid,PCell,temvfx,temlsx,ue,ve,nx,ny,dis,dtv,itt,     &
+           call X_Sweep(PGrid,PCell,wave, temvfx,temlsx,ue,ve,nx,ny,dis,dtv,itt,     &
                                                           UpdateNorVec,NondiT,k)
            do i = 1,ISize
              do j = 1,JSize
@@ -887,7 +891,7 @@ Module Clsvof
            temvfx(:,:) = vfl(:,:)
            temlsx(:,:) = phi(:,:)
            UpdateNorVec=1
-           call X_Sweep(PGrid,PCell,temvfx,temlsx,ue,ve,nx,ny,dis,dtv,itt,     &
+           call X_Sweep(PGrid,PCell,wave, temvfx,temlsx,ue,ve,nx,ny,dis,dtv,itt,     &
                                                          UpdateNorVec,NondiT,k)
            do i = 1,ISize
              do j = 1,JSize
@@ -995,11 +999,12 @@ Module Clsvof
        end do
     end subroutine Boundary_Condition_Vof
 
-    SUBROUTINE X_Sweep(PGrid,PCell,temvf,temls,ue,ve,nx,ny,dis,dtv,itt,        &
+    SUBROUTINE X_Sweep(PGrid,PCell,wave, temvf,temls,ue,ve,nx,ny,dis,dtv,itt,        &
                                          UpdateNorVec,NondiT,k)
        IMPLICIT NONE
        TYPE(Grid)                                            :: PGrid
        TYPE(Cell)                                            :: PCell
+       TYPE(TWave), INTENT(in)                               :: wave
        INTEGER(kind=it4b),INTENT(IN)                         :: UpdateNorVec,k
        INTEGER(kind=it8b),INTENT(IN)                         :: itt
        REAL(KIND=dp),INTENT(IN)                              :: dtv,NondiT
@@ -1065,10 +1070,10 @@ Module Clsvof
            end if
          end do
      !   For boundary condition
-         etau=amp0*dsin(kw*xwu-omew*(NondiT+dble(k)*dtv))
+         etau=wave%amp0*dsin(wave%kw*xwu-wave%omew*(NondiT+dble(k)*dtv))
      !    UwInlet-Amp0*kw*(UwInlet-cw0)*                   &
      !               dsin(kw*(xwu-cw0*Time))*dcosh(kw*PGrid%y(1,j))/dsinh(kw*Hw)
-         if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<Depthw+etau) then
+         if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<wave%Depthw+etau) then
            ul1=ue(0,j)!kw*cw0*etau*dcosh(kw*PGrid%y(1,j))/dsinh(kw*Hw)!
      !      Flux=dmin1(1.d0,dabs(Hw+etau-(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0))/    &
      !                  PGrid%dy(1,j))*ul1*dtv
@@ -2271,10 +2276,11 @@ Module Clsvof
       volf=dabs(vol/(dx*dy))
     end subroutine CellGeoCal
 
-    SUBROUTINE Boundary_Condition_Vof_Phi(TGrid,Time)
+    SUBROUTINE Boundary_Condition_Vof_Phi(TGrid,Time, wave)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: TGrid
       REAL(KIND=dp),INTENT(IN):: Time
+      TYPE(TWave), INTENT(in) :: wave
       REAL(KIND=dp),DIMENSION(:,:):: node(6,2),CutP(2,2),dpt(4)
       REAL(KIND=dp):: fx,dfx,nxx,nyy,dis,nxy,dx2,dy2,tol,vol,vos
       INTEGER(kind=it4b):: j,k,temp,templ
@@ -2285,10 +2291,10 @@ Module Clsvof
         templ=1
         dx2=TGrid%dx(1,j)/2.d0
         dy2=TGrid%dy(1,j)/2.d0
-        dpt(1)=TGrid%y(1,j)-dy2-Depthw-Amp0*dsin(kw*(TGrid%x(1,j)+dx2-cw0*Time))
-        dpt(2)=TGrid%y(1,j)-dy2-Depthw-Amp0*dsin(kw*(TGrid%x(1,j)-dx2-cw0*Time))
-        dpt(3)=TGrid%y(1,j)+dy2-Depthw-Amp0*dsin(kw*(TGrid%x(1,j)-dx2-cw0*Time))
-        dpt(4)=TGrid%y(1,j)+dy2-Depthw-Amp0*dsin(kw*(TGrid%x(1,j)+dx2-cw0*Time))
+        dpt(1)=TGrid%y(1,j)-dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(1,j)+dx2-wave%cw0*Time))
+        dpt(2)=TGrid%y(1,j)-dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(1,j)-dx2-wave%cw0*Time))
+        dpt(3)=TGrid%y(1,j)+dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(1,j)-dx2-wave%cw0*Time))
+        dpt(4)=TGrid%y(1,j)+dy2-wave%Depthw-wave%Amp0*dsin(wave%kw*(TGrid%x(1,j)+dx2-wave%cw0*Time))
         if(dpt(1)>=0.d0) then
           node(temp,1)=dx2
           node(temp,2)=-dy2
@@ -2299,8 +2305,8 @@ Module Clsvof
                                                    (dabs(dpt(2))+dabs(dpt(1)))
           tol=1.d0
           do while(tol>1.d-13)
-            fx=TGrid%y(1,j)-dy2-(Depthw+Amp0*dsin(kw*(node(temp,1)-cw0*Time)))
-            dfx=-Amp0*kw*dcos(kw*(node(temp,1)-cw0*Time))
+            fx=TGrid%y(1,j)-dy2-(wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1)-wave%cw0*Time)))
+            dfx=-wave%Amp0*wave%kw*dcos(wave%kw*(node(temp,1)-wave%cw0*Time))
             tol=dabs(fx/dfx)
             node(temp,1)=node(temp,1)-fx/dfx
           end do
@@ -2318,7 +2324,7 @@ Module Clsvof
         end if
         if(dpt(2)*dpt(3)<0.d0) then
           node(temp,1)=-dx2
-          node(temp,2)=Depthw+Amp0*dsin(kw*(node(temp,1)+TGrid%x(1,j)-cw0*Time))-&
+          node(temp,2)=wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1)+TGrid%x(1,j)-wave%cw0*Time))-&
                                                          TGrid%y(1,j)
           CutP(templ,1)=node(temp,1)
           CutP(templ,2)=node(temp,2)
@@ -2335,8 +2341,8 @@ Module Clsvof
                                        (dabs(dpt(3))+dabs(dpt(4)))
           tol=1.d0
           do while(tol>1.d-13)
-            fx=TGrid%y(1,j)+dy2-(Depthw+Amp0*dsin(kw*(node(temp,1)-cw0*Time)))
-            dfx=-Amp0*kw*dcos(kw*(node(temp,1)-cw0*Time))
+            fx=TGrid%y(1,j)+dy2-(wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1)-wave%cw0*Time)))
+            dfx=-wave%Amp0*wave%kw*dcos(wave%kw*(node(temp,1)-wave%cw0*Time))
             tol=dabs(fx/dfx)
             node(temp,1)=node(temp,1)-fx/dfx
           end do
@@ -2354,8 +2360,8 @@ Module Clsvof
         end if
         if(dpt(4)*dpt(1)<0.d0) then
           node(temp,1)=dx2
-          node(temp,2)=Depthw+Amp0*dsin(kw*(node(temp,1)+TGrid%x(1,j)-         &
-                                                        cw0*Time))-TGrid%y(1,j)
+          node(temp,2)=wave%Depthw+wave%Amp0*dsin(wave%kw*(node(temp,1)+TGrid%x(1,j)-         &
+                                                        wave%cw0*Time))-TGrid%y(1,j)
           CutP(templ,1)=node(temp,1)
           CutP(templ,2)=node(temp,2)
           templ=templ+1
@@ -2371,7 +2377,7 @@ Module Clsvof
         if(templ==3) then
           nxx=CutP(2,2)-CutP(1,2)
           nyy=CutP(2,1)-CutP(1,1)
-          vos=-Amp0*cw0*kw*dcos(kw*(TGrid%x(1,j)+TGrid%dx(1,j)-cw0*Time))
+          vos=-wave%Amp0*wave%cw0*wave%kw*dcos(wave%kw*(TGrid%x(1,j)+TGrid%dx(1,j)-wave%cw0*Time))
           nxy=dsqrt(nxx**2.d0+nyy**2.d0)
           if(vos>0.d0) then
             nxx=-nxx/nxy
@@ -2382,7 +2388,7 @@ Module Clsvof
           dis=dabs(CutP(2,1)*CutP(1,2)-CutP(1,1)*CutP(2,2))/nxy*               &
                                                           dsign(1.d0,0.5d0-vol)
         else
-          dis=TGrid%y(1,j)-(Depthw+Amp0*dsin(kw*(TGrid%x(1,j)-cw0*Time)))
+          dis=TGrid%y(1,j)-(wave%Depthw+wave%Amp0*dsin(wave%kw*(TGrid%x(1,j)-wave%cw0*Time)))
           nxx=0.d0
           nyy=1.d0
         end if
@@ -2423,7 +2429,7 @@ Module Clsvof
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
       TYPE(Grid),INTENT(IN)          :: PGrid
       TYPE(Cell),INTENT(IN)          :: PCell,VCell
-      TYPE(Variables),INTENT(IN)     :: TVar
+      TYPE(TVariables),INTENT(IN)    :: TVar
       REAL(KIND=dp),INTENT(OUT)      :: ForceObj
       REAL(KIND=dp)                  :: Clp,Clf,eta,Area,Pr,Pres,Strf,nyfp,    &
                                         testArea,Maxforce,MaxP,MaxA,Maxny,     &

@@ -13,22 +13,24 @@
     !*******************************************************
 Program Main
     USE PrecisionVar
-    USE Mesh
-    USE Cutcell
-    USE Clsvof
-    USE StateVariables
-    USE Constants, ONLY : g, pi
-    USE PrintResult
-    USE MPI
-    USE Solver
-    USE Particles
+    USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Point
+    USE Cutcell, ONLY : Grid_Preprocess, NewCellFace
+    USE Clsvof, ONLY : SolidObject, Initial_Clsvof
+    USE StateVariables!, ONLY : TVariables, TWave
+    USE Constants, ONLY : g, pi, nuw, row
+    USE PrintResult, ONLY : Print_Result_Tecplot_PCent, Print_Result_Tecplot_UCent, Print_Result_Tecplot_VCent
+    USE MPI, ONLY : MPI_Initial
+    USE Solver, ONLY : IterationSolution
+    USE Particles, ONLY : Particle, InitializeParticles
     IMPLICIT NONE
     TYPE(Point):: ReS,ReE, Start_Point, End_Point
-    TYPE(Variables):: Var
+    TYPE(TVariables):: Var
+    TYPE(TWave)     :: wave
     TYPE(Particle):: TraPar
     TYPE(SolidObject):: BoomCase
     INTEGER(kind=it4b):: Irec,Jrec,NI,NJ,iprint
     REAL(KIND=dp):: vel,Uref,Vint
+    REAL(dp) :: t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, LChannel, kw, omew, HDomain
     TYPE(TsimcoMesh) :: simcomesh
     INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
     call getMeshSizes(ibeg, jbeg, ighte=ight, jghte=jght)
@@ -44,17 +46,8 @@ Program Main
     NJ=Jsize+1
     call MPI_Initial
     simcomesh = TsimcoMesh(Isize, Jsize)
+    Var       = Tvariables()
 
-    allocate(Var%u(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
-    allocate(Var%v(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
-    allocate(Var%p(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
-    allocate(Var%Gpu(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(Var%Gpv(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(Var%ures(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(Var%vres(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(Var%pres(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(Var%mres(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-    allocate(Var%t(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
     allocate(TraPar%dp(10000))
     allocate(TraPar%Posp(10000))
     allocate(TraPar%uvp(10000))
@@ -97,6 +90,7 @@ Program Main
                  (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
     BoomCase%Mobj=(pi/4.d0*(BoomCase%Dobj)**2.d0+BoomCase%Wobj*BoomCase%LBar)*0.5d0*rop/Roref
 
+    wave = TWave(t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, LChannel, kw, omew, HDomain)
     UwInlet=1.d0/Uref
     UgInlet=3.d0/Uref
     UParInlet=4.d0/Uref
@@ -129,16 +123,16 @@ Program Main
     call simcomesh%HYPRE_CreateGrid2()
     !
 !    call HYPRE_CreateGrid(PGrid)
-    call Initial_Clsvof(simcomesh%PGrid,simcomesh%PCell,BoomCase)
-    call Initial_Clsvof(simcomesh%UGrid,simcomesh%UCell,BoomCase)
-    call Initial_Clsvof(simcomesh%VGrid,simcomesh%VCell,BoomCase)
+    call Initial_Clsvof(simcomesh%PGrid,simcomesh%PCell,BoomCase, wave)
+    call Initial_Clsvof(simcomesh%UGrid,simcomesh%UCell,BoomCase, wave)
+    call Initial_Clsvof(simcomesh%VGrid,simcomesh%VCell,BoomCase, wave)
     call Grid_Preprocess(simcomesh,Var,int8(1))
-    call Initial_Var(simcomesh, simcomesh%PCell,simcomesh%PGrid,Var,vel,Vint,0.d0,300.d0,Uref,300.d0,Roref,Lref)
+    call Var%Initialize(wave, simcomesh, simcomesh%PCell,simcomesh%PGrid,vel,Vint,0.d0,300.d0,Uref,300.d0,Roref,Lref)
     call InitializeParticles(simcomesh%PGrid,Var,TraPar)
   !  call Print_Result_Tecplot_PCent(PGrid,Var,PCell,TraPar,INT8(0),1)
     call Print_Result_Tecplot_UCent(simcomesh%UGrid,Var,simcomesh%UCell,INT8(0))
     call Print_Result_Tecplot_VCent(simcomesh%VGrid,Var,simcomesh%VCell,INT8(0))
     call NewCellFace(simcomesh)
-    call IterationSolution(simcomesh, Var,TraPar,BoomCase,50)
+    call IterationSolution(simcomesh, Var,wave, TraPar,BoomCase,50)
     pause
 end program main

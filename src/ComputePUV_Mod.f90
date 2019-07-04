@@ -4,6 +4,7 @@ Module ComputePUV
     USE Clsvof
     USE Cutcell
     USE StateVariables
+    USE Constants, ONLY : epsi, roa, row
     USE PredictorUV
     USE ProjectionP
     USE Particles
@@ -19,7 +20,7 @@ Module ComputePUV
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: UGrid,VGrid,PGrid
       TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell,PCellO,UCellO,VCellO
-      TYPE(Variables),INTENT(INOUT):: TVar
+      TYPE(TVariables),INTENT(INOUT):: TVar
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
       TYPE(Particle),INTENT(INOUT):: TraPar
       TYPE(SolidObject),INTENT(IN):: BoomCase
@@ -228,7 +229,7 @@ Module ComputePUV
 
     SUBROUTINE VariablesInternalCellCondition(TVar,PCell,UCell,VCell)
       IMPLICIT NONE
-      TYPE(Variables),INTENT(INOUT):: TVar
+      TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
       INTEGER(kind=it4b):: i,j
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize

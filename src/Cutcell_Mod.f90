@@ -2,6 +2,7 @@ Module Cutcell
     USE PrecisionVar
     USE Mesh
     USE StateVariables
+    USE Constants, ONLY : epsi, epsiF
     IMPLICIT NONE
     PRIVATE
     PUBLIC:: Grid_Preprocess,NewCellFace
@@ -18,7 +19,7 @@ Module Cutcell
       Subroutine Grid_Preprocess(simcomesh, TVar,itt)
         IMPLICIT NONE
         TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
-        TYPE(Variables),INTENT(IN):: TVar
+        TYPE(TVariables),INTENT(IN):: TVar
         INTEGER(kind=it8b),INTENT(IN):: itt
         INTEGER(kind=it4b):: i,j
         INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
