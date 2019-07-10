@@ -6,14 +6,17 @@ Module StateVariables
     PRIVATE
     INTEGER(kind=it4b),PUBLIC::ite
     REAL(KIND=dp),PUBLIC::Lref,Rey,Fr,wa,Ta,xc,yc,UwInlet,UgInlet,             &
-                          xmax,Roref,Hw,Ha,VofInlet,nuref
+                          xmax,Roref,Hw,Ha,nuref
 !   for run again from
-    INTEGER(KIND=it8b),PUBLIC::IttRun,IttBegin
-    LOGICAL,PUBLIC:: RunAgain,ICorProb
+    LOGICAL :: RunAgain
+    LOGICAL :: ICorProb
+    INTEGER(it8b) :: IttRun
+!    INTEGER(KIND=it8b),PUBLIC::IttRun,IttBegin
+!    LOGICAL,PUBLIC:: RunAgain,ICorProb
 !   For particles from 3D to 2D
-    REAL(KIND=dp),PUBLIC::zp,UParInlet,HParInlet,DParInlet,rop,gx,gy
+!    REAL(KIND=dp),PUBLIC::zp,UParInlet,HParInlet,DParInlet,rop,gx,gy
 !   For number of particles into system
-    INTEGER(kind=it4b),PUBLIC:: NParInlet,IParInlet
+!    INTEGER(kind=it4b),PUBLIC:: NParInlet,IParInlet
 !   For Water Entry problem
     REAL(KIND=dp),PUBLIC::y0,y1
 !   For Wave Braking on vertical wall
@@ -22,13 +25,12 @@ Module StateVariables
                       LChannel,kw,omew,HDomain
     END TYPE TWave
     CHARACTER*70,PUBLIC           ::dir
-    TYPE,PUBLIC  :: TVariables
+    TYPE :: TVariables
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: u,v,p,t,Gpu,Gpv,ures,vres,pres,mres
       REAL(KIND=dp):: Uint,Vint,Pint,Tint,Uref,Roref,Pref,Tref
     CONTAINS
       PROCEDURE, PASS(thiS), PUBLIC :: Initialize
     END TYPE TVariables
-    PUBLIC:: Boundary_Condition_Var
     interface Boundary_Condition_Var
       module procedure Boundary_Condition_Var
     end interface Boundary_Condition_Var
@@ -38,7 +40,15 @@ Module StateVariables
     interface TWave
        module procedure constructWave
     end interface
-    PUBLIC :: TWave
+    Interface getSolverVariables
+       Module Procedure getSolverVariables
+    End Interface getSolverVariables
+    Interface setSolverVariables
+       Module Procedure setSolverVariables
+    End Interface setSolverVariables
+    PUBLIC :: TWave, TVariables
+    PUBLIC:: Boundary_Condition_Var
+    PUBLIC :: setSolverVariables, getSolverVariables
     contains
 
     TYPE(TVariables) function constructVar() result( this )
@@ -261,6 +271,29 @@ Module StateVariables
         Vari%v(i,Jsize+jght) = Vari%v(i,Jsize)
       end do
     end subroutine Boundary_Condition_Var
+
+    !The naming scheme is not correct here, FIXME
+    SUBROUTINE setSolverVariables(RunAgain_, ICorProb_, IttRun_)
+      !
+      LOGICAL,       INTENT(in) :: RunAgain_, ICorProb_
+      INTEGER(it8b), INTENT(in) :: IttRun_
+      !
+      RunAgain = RunAgain_
+      ICorProb = ICorProb_
+      IttRun   = IttRun_
+
+    END SUBROUTINE setSolverVariables
+
+    SUBROUTINE getSolverVariables(RunAgain_, ICorProb_, IttRun_)
+      !
+      LOGICAL, OPTIONAL, INTENT(out) :: RunAgain_, ICorProb_
+      INTEGER(it8b), OPTIONAL, INTENT(out) :: IttRun_
+      !
+      IF(PRESENT(RunAgain_)) RunAgain_ = RunAgain
+      IF(PRESENT(ICorProb_)) ICorProb_ = ICorProb
+      IF(PRESENT(IttRun_)) IttRun_     = IttRun
+    END SUBROUTINE getSolverVariables
+
 End Module StateVariables
 
 

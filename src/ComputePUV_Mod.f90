@@ -22,7 +22,7 @@ Module ComputePUV
       TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell,PCellO,UCellO,VCellO
       TYPE(TVariables),INTENT(INOUT):: TVar
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
-      TYPE(Particle),INTENT(INOUT):: TraPar
+      TYPE(TParticle),INTENT(INOUT):: TraPar
       TYPE(SolidObject),INTENT(IN):: BoomCase
       REAL(KIND=dp),INTENT(IN):: dt
       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: VolParU,VolParV,SParU,SParV

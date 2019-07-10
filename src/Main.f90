@@ -13,26 +13,32 @@
     !*******************************************************
 Program Main
     USE PrecisionVar
-    USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Point
+    USE Mesh, ONLY : TsimcoMesh, getMeshSizes, TPoint
     USE Cutcell, ONLY : Grid_Preprocess, NewCellFace
     USE Clsvof, ONLY : SolidObject, Initial_Clsvof
-    USE StateVariables!, ONLY : TVariables, TWave
+    USE StateVariables, ONLY : TVariables, TWave, setSolverVariables
+    !Global variables that needs to be fixed:
+    USE StateVariables, ONLY : dir, uwinlet, uginlet, roref, rey, nuref, lref
+    USE StateVariables, ONLY : ha, hw
     USE Constants, ONLY : g, pi, nuw, row
     USE PrintResult, ONLY : Print_Result_Tecplot_PCent, Print_Result_Tecplot_UCent, Print_Result_Tecplot_VCent
     USE MPI, ONLY : MPI_Initial
     USE Solver, ONLY : IterationSolution
-    USE Particles, ONLY : Particle, InitializeParticles
+    USE Particles, ONLY : TParticle
     IMPLICIT NONE
-    TYPE(Point):: ReS,ReE, Start_Point, End_Point
+    TYPE(TPoint):: ReS,ReE, Start_Point, End_Point
     TYPE(TVariables):: Var
     TYPE(TWave)     :: wave
-    TYPE(Particle):: TraPar
+    TYPE(TParticle):: TraPar
     TYPE(SolidObject):: BoomCase
     INTEGER(kind=it4b):: Irec,Jrec,NI,NJ,iprint
+    REAL(dp) :: zp,UParInlet,HParInlet,DParInlet,rop,gx,gy
     REAL(KIND=dp):: vel,Uref,Vint
     REAL(dp) :: t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, LChannel, kw, omew, HDomain
     TYPE(TsimcoMesh) :: simcomesh
-    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
+    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght, NParInlet, IParInlet
+    LOGICAL :: RunAgain, ICorProb
+    INTEGER(it8b) :: IttRun
     call getMeshSizes(ibeg, jbeg, ighte=ight, jghte=jght)
     open(unit=5,file='input.dat',action='read')
     read(5,*),
@@ -48,10 +54,11 @@ Program Main
     simcomesh = TsimcoMesh(Isize, Jsize)
     Var       = Tvariables()
 
-    allocate(TraPar%dp(10000))
-    allocate(TraPar%Posp(10000))
-    allocate(TraPar%uvp(10000))
-    TraPar%np=0
+    !Particles
+    IParInlet=50
+    NParInlet=5
+    TraPar = TParticle(0, NParInlet, IParInlet) ! Zero particles
+
     Lref=1.d0 !Hw
     Uref=1.d0
     Roref=row
@@ -73,12 +80,8 @@ Program Main
     kw=2.d0*pi/Lamdaw
     Amp0=0.1d0/Lref/2.d0
     omew=2.d0*pi/twp
- !   Start_Point%x=-6.5/Lref
-    Start_Point%x=0.d0/Lref
-    Start_point%y=(HChannel-HDomain)/Lref !-Hw/Lref
- !   End_Point%x=6.5d0/Lref
-    End_Point%x=LChannel/Lref
-    End_Point%y=HChannel/Lref
+    Start_Point = TPoint(0.d0/Lref, (HChannel-HDomain)/Lref) !-Hw/Lref
+    End_Point = TPoint(LChannel/Lref, HChannel/Lref)
     BoomCase%Posp%x=15.d0/Lref
     BoomCase%Posp%y=Depthw
     BoomCase%Dobj=0.8d0/Lref
@@ -96,12 +99,8 @@ Program Main
     UParInlet=4.d0/Uref
     HParInlet=1.5d0/Lref
     DParInlet=1.d-2/Lref
-    IParInlet=50
-    NParInlet=5
-    ReS%x=13.5d0/Lref
-    ReS%y=0.2d0/Lref
-    ReE%x=16.0d0/Lref
-    ReE%y=0.8d0/Lref
+    ReS = TPoint(13.5d0/Lref, 0.2d0/Lref)
+    ReE = TPoint(16.0d0/Lref, 0.8d0/Lref)
     zp=1.d-2/Lref
     Irec=375
     Jrec=60
@@ -109,11 +108,11 @@ Program Main
     vel=0.d0
     gx=0.d0
     gy=g
-    VofInlet=1.d0
     RunAgain=.FALSE.
 !   define corner problem
     ICorProb=.TRUE.
     IttRun=600
+    CALL setSolverVariables(RunAgain, ICorProb, IttRun)
 !    call Initial_Grid(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,PGrid,Lref,0)
 !    call InitialUVGrid(PGrid,UGrid,0,Lref)
 !    call InitialUVGrid(PGrid,VGrid,1,Lref)
@@ -128,7 +127,7 @@ Program Main
     call Initial_Clsvof(simcomesh%VGrid,simcomesh%VCell,BoomCase, wave)
     call Grid_Preprocess(simcomesh,Var,int8(1))
     call Var%Initialize(wave, simcomesh, simcomesh%PCell,simcomesh%PGrid,vel,Vint,0.d0,300.d0,Uref,300.d0,Roref,Lref)
-    call InitializeParticles(simcomesh%PGrid,Var,TraPar)
+    call TraPar%InitializeParticles(simcomesh%PGrid,Var, UParInlet, HParInlet, DParInlet, zp, rop, gx, gy)
   !  call Print_Result_Tecplot_PCent(PGrid,Var,PCell,TraPar,INT8(0),1)
     call Print_Result_Tecplot_UCent(simcomesh%UGrid,Var,simcomesh%UCell,INT8(0))
     call Print_Result_Tecplot_VCent(simcomesh%VGrid,Var,simcomesh%VCell,INT8(0))

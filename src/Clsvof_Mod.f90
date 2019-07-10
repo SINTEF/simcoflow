@@ -10,7 +10,7 @@ Module Clsvof
     INTEGER,PARAMETER:: band_width = 4,nv = 10,nl = 5
     REAL(KIND=dp),PUBLIC,PARAMETER:: vofeps=1.d-14,tolp=1.d-10,TolDeno=1.d-24
     TYPE,PUBLIC:: SolidObject
-      TYPE(Point):: Posp,PospO
+      TYPE(TPoint):: Posp,PospO
       REAL(KIND=dp):: us,vs,asx,asy
       REAL(KIND=dp):: Dobj,Wobj,Mobj
       REAL(KIND=dp):: Xbar1,Xbar2,Ybar,Lbar
@@ -2435,6 +2435,7 @@ Module Clsvof
                                         testArea,Maxforce,MaxP,MaxA,Maxny,     &
                                         Areatemp,SForce
       INTEGER(KIND=it4b)             :: i,j,ii,jj,temp, ibeg, jbeg, Isize, Jsize
+      LOGICAL :: ICorProb
       Pr = 0.d0
       Clp = 0.d0
       Area = 0.d0
@@ -2541,6 +2542,7 @@ Module Clsvof
               Clp=Clp+Pres*Area*nyfp
             end if
             ! 0.6d0 is the volume of solid inside a cell containing boom bar
+            call getSolverVariables(ICorProb_=ICorProb)
             if(ICorProb.eqv..TRUE.) then
               if(PCell%vofS(i,j+1)>0.6d0-epsi.and.PCell%vofS(i,j+1)<0.6d0+     &
                                                         epsi.and.j<Jsize-1) then
@@ -2583,8 +2585,8 @@ Module Clsvof
       TYPE(Grid),INTENT(IN)                   :: TGrid
       TYPE(Cell),INTENT(INOUT)                :: TCell
       TYPE(SolidObject),INTENT(IN)            :: BoomCase
-      TYPE(Point)                             :: Pt(0:1,0:1)
-      TYPE(Point),DIMENSION(4)                :: CutP
+      TYPE(TPoint)                             :: Pt(0:1,0:1)
+      TYPE(TPoint),DIMENSION(4)                :: CutP
       INTEGER(kind=it4b)                      :: i,j,ii,jj,ctr
       REAL(KIND=dp)                           :: x1,y1,dx,dy,dis,vol
       REAL(KIND=dp)                           :: tol,dpt(4)
@@ -2961,8 +2963,8 @@ Module Clsvof
     SUBROUTINE EdgeGeoCalCyl(BoomCase,Pt1,Pt2,CutP,ctr)
        IMPLICIT NONE
        TYPE(SolidObject),INTENT(IN)          :: BoomCase
-       TYPE(point),INTENT(IN)                :: Pt1,Pt2
-       TYPE(point),DIMENSION(4),INTENT(INOUT):: CutP
+       TYPE(Tpoint),INTENT(IN)                :: Pt1,Pt2
+       TYPE(Tpoint),DIMENSION(4),INTENT(INOUT):: CutP
        INTEGER(KIND=it4b),INTENT(INOUT)      :: ctr
        REAL(KIND=dp)                         :: epsil,Lvs_Pt1,Lvs_Pt2,EdAr
        Lvs_Pt1=dsqrt((Pt1%x-BoomCase%Posp%x)**2.d0+                            &

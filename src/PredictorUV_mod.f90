@@ -3,8 +3,7 @@ Module PredictorUV
     USE Mesh
     USE Cutcell
     USE Clsvof
-    USE StateVariables, ONLY : TVariables, nuref, rey, roref, fr, rop, UParInlet, &
-        &                      zp
+    USE StateVariables, ONLY : TVariables, nuref, rey, roref, fr
     USE Constants, ONLY : pi, epsi, nua, nuw, roa, row, BetaVis
     USE Printresult
     USE MPI
@@ -40,7 +39,7 @@ Module PredictorUV
       TYPE(PoissonCoefficient),INTENT(INOUT):: PU,PV
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: VolParU,VolParV,SParU,SParV
-      TYPE(Particle),INTENT(INOUT):: TraPar
+      TYPE(TParticle),INTENT(INOUT):: TraPar
       TYPE(SolidObject),INTENT(IN):: BoomCase
       INTEGER(kind=it4b):: i,j,ii,jj
       INTEGER*8:: A,parcsr_A,b,par_b,x,par_x,solver,precond
@@ -119,7 +118,7 @@ Module PredictorUV
           print*,
           print*,TraPar%uvp(i)%u,TraPar%uvp(i)%v
           print*, 'problem with algorithm locating particles in UCell_PredictorUv_105'
-          TraPar%uvp(i)%u=UParInlet
+          TraPar%uvp(i)%u=TraPar%UParInlet
           MoParExIJU(i,1)=MoParExIJU(i-1,1)
           MoParExIJU(i,2)=MoParExIJU(i-1,2)
         end if
@@ -131,7 +130,7 @@ Module PredictorUV
           print*,VGrid%x(1,1)-VGrid%dx(1,1)/2.d0
           print*,VGrid%x(1,1)+VGrid%dx(1,1)/2.d0
           print*, 'problem with algorithm locating particles in VCell_PredictorUv_105'
-          TraPar%uvp(i)%u=UParInlet
+          TraPar%uvp(i)%u=TraPar%UParInlet
           MoParExIJV(i,1)=MoParExIJV(i-1,1)
           MoParExIJV(i,2)=MoParExIJV(i-1,2)
         end if
@@ -306,18 +305,18 @@ Module PredictorUV
             ropp=row*UCell%vof(ii,jj)/(1.d0-UCell%vofS(ii,jj))+                &
                  roa*(1.d0-UCell%vof(ii,jj)-UCell%vofS(ii,jj))/                &
                  (1.d0-UCell%vofS(ii,jj))
-            mp=Rop*1.d0/6.d0*pi*TraPar%dp(i)**3.d0
+            mp=TraPar%Rop*1.d0/6.d0*pi*TraPar%dp(i)**3.d0
             ug=TVar%u(ii,jj)
             vg=TVar%v(ii,jj)
             VRel=dsqrt((TraPar%uvp(i)%u-ug)**2.d0+(TraPar%uvp(i)%v-vg)**2.d0)
             if(VRel<1.d-7) VRel=1.d-7
             Reyp=TraPar%dp(i)*VRel/nupp
             Cd=Drag(Reyp)
-            tp=4.d0/3.d0*TraPar%dp(i)*rop/ropp/Cd
+            tp=4.d0/3.d0*TraPar%dp(i)*TraPar%rop/ropp/Cd
             fluxDiv(ii,jj,1)=fluxDiv(ii,jj,1)+mp/tp*TraPar%uvp(i)%u*VRel/      &
-                           (TVar%Roref*TVar%Uref**2.d0/UGrid%Lref)/zp/Uro(ii,jj)
+                           (TVar%Roref*TVar%Uref**2.d0/UGrid%Lref)/TraPar%zp/Uro(ii,jj)
             MoParExCo(ii,jj,1)=MoParExCo(ii,jj,1)+mp/tp*VRel/                  &
-                           (TVar%Roref*TVar%Uref/UGrid%Lref)/zp/Uro(ii,jj)
+                           (TVar%Roref*TVar%Uref/UGrid%Lref)/TraPar%zp/Uro(ii,jj)
           end if
         end if
       end do
@@ -467,18 +466,18 @@ Module PredictorUV
                  (1.d0-VCell%vofS(ii,jj))
             ropp=row*VCell%vof(ii,jj)/(1.d0-VCell%vofS(ii,jj))+                &
               roa*(1.d0-VCell%vof(ii,jj)-VCell%vofS(ii,jj))/(1.d0-VCell%vofS(ii,jj))
-            mp=Rop*1.d0/6.d0*pi*TraPar%dp(i)**3.d0
+            mp=TraPar%Rop*1.d0/6.d0*pi*TraPar%dp(i)**3.d0
             ug=TVar%u(ii,jj)
             vg=TVar%v(ii,jj)
             VRel=dsqrt((TraPar%uvp(i)%u-ug)**2.d0+(TraPar%uvp(i)%v-vg)**2.d0)
             if(VRel<1.d-7) VRel=1.d-7
             Reyp=TraPar%dp(i)*VRel/nupp
             Cd=Drag(Reyp)
-            tp=4.d0/3.d0*TraPar%dp(i)*rop/ropp/Cd
+            tp=4.d0/3.d0*TraPar%dp(i)*TraPar%rop/ropp/Cd
             FluxDiv(ii,jj,2)=FluxDiv(ii,jj,2)+mp/tp*TraPar%uvp(i)%v*VRel/      &
-                           (TVar%Roref*TVar%Uref**2.d0/VGrid%Lref)/zp/Vro(ii,jj)
+                           (TVar%Roref*TVar%Uref**2.d0/VGrid%Lref)/TraPar%zp/Vro(ii,jj)
             MoParExCo(ii,jj,2)=MoParExCo(ii,jj,2)+mp/tp*VRel/(TVar%Roref*      &
-                           TVar%Uref/VGrid%Lref)/zp/Vro(ii,jj)
+                           TVar%Uref/VGrid%Lref)/TraPar%zp/Vro(ii,jj)
             if(dabs(MoParExco(ii,jj,2))>1.d10.or.isnan(fluxDiv(ii,jj,2)).or.   &
               isnan(MoParExco(ii,jj,2))) then
               print*,fluxDiv(ii,jj,2)
@@ -487,12 +486,12 @@ Module PredictorUV
               print*,TraPar%mp(i),TraPar%tp(i)
               print*,MoParExco(ii,jj,2)
               print*,TraPar%mp(i)/TraPar%tp(i)*TraPar%uvp(i)%v*TraPar%VRelG(i)/&
-                          (TVar%Roref*TVar%Uref**2.d0/VGrid%Lref)/zp/Vro(ii,jj)
+                          (TVar%Roref*TVar%Uref**2.d0/VGrid%Lref)/TraPar%zp/Vro(ii,jj)
               print*,TraPar%mp(i)/TraPar%tp(i)/TraPar%VRelG(i)/                &
-                    (TVar%Roref*TVar%Uref/VGrid%Lref)/zp/Vro(ii,jj)
+                    (TVar%Roref*TVar%Uref/VGrid%Lref)/TraPar%zp/Vro(ii,jj)
               print*,
               print*,TraPar%mp(i),TraPar%tp(i),TraPar%VRelG(i)
-              print*,TVar%Roref*TVar%Uref/VGrid%Lref,zp,Vro(ii,jj)
+              print*,TVar%Roref*TVar%Uref/VGrid%Lref,TraPar%zp,Vro(ii,jj)
               pause 'Momentum Particle 425'
             end if
           end if

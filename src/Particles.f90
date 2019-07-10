@@ -11,106 +11,135 @@ Module Particles
   TYPE,PRIVATE:: ParVel
     REAL(KIND=dp):: u,v
   End TYPE ParVel
-  TYPE,PUBLIC:: Particle
+  TYPE :: TParticle
     INTEGER(kind=it4b):: np
-    TYPE(Point),DIMENSION(:),allocatable:: Posp
+    INTEGER(it4b) :: NParInlet, IParInlet
+    TYPE(TPoint),DIMENSION(:),allocatable:: Posp
     TYPE(ParVel),DIMENSION(:),allocatable:: uvp
-    REAL(KIND=dp),DIMENSION(:),allocatable:: mp,dp,tp
+    REAL(dp),DIMENSION(:),allocatable:: mp,dp,tp
+    REAL(dp) :: UParInlet, HParInlet, DParInlet, zp, rop, gx, gy
   ! For secondary break up
     REAL(KIND=dp),DIMENSION(:),allocatable:: t
     REAL(KIND=dp),DIMENSION(:),allocatable:: VrelG,y,dydt
-  End TYPE Particle
-  PUBLIC:: TrackingParticles,InitializeParticles,ParticlePosition,Drag,ParticleInletCondition
-  Interface TrackingParticles
-    Module Procedure TrackingParticles
-  End interface
-  Interface InitializeParticels
-    Module procedure InitializeParticles
-  End interface
+  CONTAINS
+    PROCEDURE, PASS(this), PUBLIC :: InitializeParticles
+    PROCEDURE, PASS(this), PUBLIC :: ParticleInletCondition
+    PROCEDURE, PASS(this), PUBLIC :: TrackingParticles
+  End TYPE TParticle
+  PUBLIC:: ParticlePosition,Drag
   Interface ParticlePosition
     Module procedure ParticlePosition
-  End interface
-  Interface ParticleInletCondition
-    Module procedure ParticleInletCondition
   End interface
   Interface Drag
     Module procedure Drag
   End interface
+  Interface TParticle
+     Module procedure construct
+  End interface TParticle
+
+  PUBLIC :: TParticle
   Contains
-  Subroutine InitializeParticles(Pgrid,Var,TraPar)
+
+  TYPE(TParticle) function construct(np, NParInlet, IParInlet) RESULT ( this )
+    !
+    INTEGER (it4b) :: np_
+    this % np = np
+    this % NParInlet = NParInlet
+    this % IParInlet = IParInlet
+    np_ = MAX(1, np+NParInlet)
+    allocate(this%dp(np_))
+    allocate(this%Posp(np_))
+    allocate(this%uvp(np_))
+    allocate(this%mp(np_))
+    allocate(this%dp(np_))
+    allocate(this%tp(np_))
+    allocate(this%t(np_))
+    allocate(this%VrelG(np_))
+    allocate(this%y(np_))
+    allocate(this%dydt(np_))
+  end function construct
+  Subroutine InitializeParticles(this, Pgrid,Var, UParInlet, HParInlet, DParInlet, zp, rop, gx, gy)
     IMPLICIT NONE
+    CLASS(TParticle),INTENT(INOUT):: this
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(TVariables),INTENT(IN):: Var
-    TYPE(Particle),INTENT(INOUT):: TraPar
+    REAL(dp), INTENT(in) :: UParInlet, HParInlet, DParInlet, zp, rop, gx, gy
     INTEGER:: i
     REAL(KIND=dp):: DragFC
     REAL(KIND=dp),DIMENSION(:),allocatable:: ranum
     INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
     call getMeshSizes(ibeg, jbeg, Isize, Jsize)
-    allocate(ranum(TraPar%np))
+    allocate(ranum(this%np))
     call Random_Number(ranum)
     DragFC=18.d0
-    do i=1,TraPar%np
-      TraPar%dp(i)=1.d-6+0.008d0*ranum(i)
+    this % UParInlet = UParInlet
+    this % HParInlet = HParInlet
+    this % DParInlet = DParInlet
+    this % zp        = zp
+    this % rop       = rop
+    this % gx        = gx
+    this % gy        = gy
+    do i=1,this%np
+      this%dp(i)=1.d-6+0.008d0*ranum(i)
     end do
     call Random_Number(ranum)
-    do i=1,TraPar%np
-      TraPar%Posp(i)%x=(PGrid%x(10,1)+(PGrid%x(Isize,1)-PGrid%x(350,1))*ranum(i))*Lref
+    do i=1,this%np
+      this%Posp(i)%x=(PGrid%x(10,1)+(PGrid%x(Isize,1)-PGrid%x(350,1))*ranum(i))*Lref
     end do
     call Random_Number(ranum)
-    do i=1,TraPar%np
-      TraPar%Posp(i)%y=(PGrid%y(1,2)+(PGrid%y(1,Jsize)-PGrid%y(1,80))*ranum(i))*Lref
+    do i=1,this%np
+      this%Posp(i)%y=(PGrid%y(1,2)+(PGrid%y(1,Jsize)-PGrid%y(1,80))*ranum(i))*Lref
     end do
  !  No contribution of particles
  !******************************
-    do i=1,TraPar%np
-      TraPar%mp(i)=1.d0/6.d0*pi*(TraPar%dp(i))**3.d0*row
-      TraPar%tp(i)=row*TraPar%dp(i)**2.d0/DragFC/(nua*roa)
-      TraPar%uvp(i)%u=20.d0
-      TraPar%uvp(i)%v=0.d0
+    do i=1,this%np
+      this%mp(i)=1.d0/6.d0*pi*(this%dp(i))**3.d0*row
+      this%tp(i)=row*this%dp(i)**2.d0/DragFC/(nua*roa)
+      this%uvp(i)%u=20.d0
+      this%uvp(i)%v=0.d0
     end do
     deallocate(ranum)
   end subroutine InitializeParticles
-  subroutine TrackingParticles(PGrid,PCell,BoomCase,Var,dt,TraPar)
+  subroutine TrackingParticles(this, PGrid,PCell,BoomCase,Var,dt)
     IMPLICIT NONE
+    CLASS(TParticle),INTENT(INOUT):: this 
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(Cell),INTENT(IN):: PCell
     TYPE(SolidObject),INTENT(INOUT):: BoomCase
     TYPE(TVariables),INTENT(IN):: Var
     REAL(KIND=dp),INTENT(IN):: dt
-    TYPE(Particle),INTENT(INOUT):: TraPar
     INTEGER(kind=it4b):: i,ii,jj,itep
     REAL(KIND=dp),DIMENSION(:),allocatable:: Upo,Upn,Vpo,Vpn,axp,ayp
-    TYPE(Point),DIMENSION(:),allocatable:: xyp
+    TYPE(TPoint),DIMENSION(:),allocatable:: xyp
     REAL(KIND=dp):: dudx,dvdy,ug,vg,ug0,vg0,VRel,Reyp,Cd
     REAL(KIND=dp):: tp,FXT,EXPT,Spx,Spy,dtp,gama,nupp,ropp,beta,sig
     INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
     call getMeshSizes(ibeg, jbeg, Isize, Jsize)
-    allocate(Upo(TraPar%np))
-    allocate(Vpo(TraPar%np))
-    allocate(Upn(TraPar%np))
-    allocate(Vpn(TraPar%np))
-    allocate(xyp(TraPar%np))
-    allocate(axp(TraPar%np))
-    allocate(ayp(TraPar%np))
+    allocate(Upo(this%np))
+    allocate(Vpo(this%np))
+    allocate(Upn(this%np))
+    allocate(Vpn(this%np))
+    allocate(xyp(this%np))
+    allocate(axp(this%np))
+    allocate(ayp(this%np))
     dtp = dt*(PGrid%Lref/Var%Uref)/dble(itp)
-    do i=1,TraPar%np
-      xyp(i)%x=TraPar%Posp(i)%x
-      xyp(i)%y=TraPar%PosP(i)%y
-      Upo(i)=TraPar%uvp(i)%u
-      VPo(i)=TraPar%uvp(i)%v
+    do i=1,this%np
+      xyp(i)%x=this%Posp(i)%x
+      xyp(i)%y=this%PosP(i)%y
+      Upo(i)=this%uvp(i)%u
+      VPo(i)=this%uvp(i)%v
     end do
     do itep=1,itp
-      do i=1,TraPar%np
-        call ParticlePosition(TraPar%Posp(i),PGrid,ii,jj)
+      do i=1,this%np
+        call ParticlePosition(this%Posp(i),PGrid,ii,jj)
         if(ii/=-1.and.jj/=-1) then
-          if(TraPar%PosP(i)%x/Lref<PGrid%x(Isize,1).and.                       &
-             TraPar%PosP(i)%y/Lref<PGrid%y(1,Jsize).and.                       &
+          if(this%PosP(i)%x/Lref<PGrid%x(Isize,1).and.                       &
+             this%PosP(i)%y/Lref<PGrid%y(1,Jsize).and.                       &
              PCell%vofS(ii,jj)<1.d0-epsi) then
             ropp=row*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)+            &
                  roa*(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
                      (1.d0-PCell%vofS(ii,jj)+tol)
-            gama=rop/ropp
+            gama=this%rop/ropp
             nupp=nuw*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)+            &
                  nua*(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
                      (1.d0-PCell%vofS(ii,jj)+tol)
@@ -118,25 +147,25 @@ Module Particles
             dvdy=(Var%v(ii,jj)-Var%v(ii,jj-1))/PGrid%dy(ii,jj)
             ug0=0.5d0*(Var%u(ii,jj)+Var%u(ii-1,jj))
             vg0=0.5d0*(Var%v(ii,jj)+Var%v(ii,jj-1))
-            ug=(ug0+dudx*(TraPar%Posp(i)%x/Lref-PGrid%x(ii,jj)))*Var%Uref
-            vg=(vg0+dvdy*(TraPar%Posp(i)%y/Lref-PGrid%y(ii,jj)))*Var%Uref
+            ug=(ug0+dudx*(this%Posp(i)%x/Lref-PGrid%x(ii,jj)))*Var%Uref
+            vg=(vg0+dvdy*(this%Posp(i)%y/Lref-PGrid%y(ii,jj)))*Var%Uref
             VRel=dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
             if(VRel<1.d-7) VRel=1.d-7
-            Reyp=TraPar%dp(i)*VRel/nupp
+            Reyp=this%dp(i)*VRel/nupp
             Cd=Drag(Reyp)
-            axp(i)=(1.d0-gama)/(gama+Ca)*gx-3.d0*Cd/8.d0/(TraPar%dp(i)/2.d0)/   &
+            axp(i)=(1.d0-gama)/(gama+Ca)*this%gx-3.d0*Cd/8.d0/(this%dp(i)/2.d0)/   &
                    (gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
-            ayp(i)=(1.d0-gama)/(gama+Ca)*gy-3.d0*Cd/8.d0/(TraPar%dp(i)/2.d0)/   &
+            ayp(i)=(1.d0-gama)/(gama+Ca)*this%gy-3.d0*Cd/8.d0/(this%dp(i)/2.d0)/   &
                 (gama+Ca)*(vpo(i)-vg)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
          !   Upn(i)=Upo(i)+axp(i)*dtp
          !   Vpn(i)=Vpo(i)+ayp(i)*dtp
-            sig=(1.d0-gama)/(gama+Ca)*gx
-            beta=3.d0*Cd/8.d0/(TraPar%dp(i)/2.d0)/(gama+Ca)*                    &
+            sig=(1.d0-gama)/(gama+Ca)*this%gx
+            beta=3.d0*Cd/8.d0/(this%dp(i)/2.d0)/(gama+Ca)*                    &
                                       dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
             Upn(i)=Upo(i)*exp(-beta*dtp)+ug*(1.d0-exp(-beta*dtp))+              &
                    sig/beta*(1.d0-exp(-beta*dtp))
             xyp(i)%x=xyp(i)%x+0.5d0*(Upn(i)+Upo(i))*dtp
-            sig=(1.d0-gama)/(gama+Ca)*gy
+            sig=(1.d0-gama)/(gama+Ca)*this%gy
             Vpn(i)=Vpo(i)*exp(-beta*dtp)+vg*(1.d0-exp(-beta*dtp))+              &
                    sig/beta*(1.d0-exp(-beta*dtp))
             xyp(i)%y=xyp(i)%y+0.5d0*(Vpn(i)+Vpo(i))*dtp
@@ -145,15 +174,15 @@ Module Particles
               print*,i
               print*,axp(i),dtp
               print*,
-              print*,(1.d0-gama)/(gama+Ca)*gx,3.d0*Cd/8.d0/(TraPar%dp(i)/2.d0)/   &
+              print*,(1.d0-gama)/(gama+Ca)*this%gx,3.d0*Cd/8.d0/(this%dp(i)/2.d0)/   &
                    (gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
-              print*,3.d0*Cd/8.d0,(TraPar%dp(i)/2.d0)
+              print*,3.d0*Cd/8.d0,(this%dp(i)/2.d0)
               print*,(gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
               print*,
               print*,Reyp
               print*,
               print*,'What the fuck'
-              print*,TraPar%uvp(i)%u,TraPar%uvp(i)%v
+              print*,this%uvp(i)%u,this%uvp(i)%v
               print*,nupp
               print*,PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)
               print*,(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
@@ -168,12 +197,12 @@ Module Particles
               print*,beta,sig,exp(-beta*dtp)
               print*,
               print*,(1.d0-gama),(gama+Ca)
-              print*,gama,gx
-              print*,Cd,(TraPar%dp(i)/2.d0)
+              print*,gama,this%gx
+              print*,Cd,(this%dp(i)/2.d0)
               print*,upo(i),ug
               print*,ug0,Var%u(ii,jj),Var%u(ii-1,jj)
               print*,
-              print*,TraPar%Posp(i)%x,TraPar%Posp(i)%y
+              print*,this%Posp(i)%x,this%Posp(i)%y
               print*,PCell%vof(ii,jj)
               pause 'Particle 127'
             end if
@@ -195,12 +224,12 @@ Module Particles
         end if
       end do
     end do
-    do i=1,TraPar%np
-      TraPar%Posp(i)%x=xyp(i)%x
-      TraPar%PosP(i)%y=xyp(i)%y
-      TraPar%uvp(i)%u=Upo(i)
-      TraPar%uvp(i)%v=VPo(i)
-      if(isnan(TRaPar%uvp(i)%u)) then
+    do i=1,this%np
+      this%Posp(i)%x=xyp(i)%x
+      this%PosP(i)%y=xyp(i)%y
+      this%uvp(i)%u=Upo(i)
+      this%uvp(i)%v=VPo(i)
+      if(isnan(this%uvp(i)%u)) then
         pause 'Particle 149'
       end if
     end do
@@ -231,7 +260,7 @@ Module Particles
 ! The output is the cell number                                 !
 !CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC!
   Subroutine ParticlePosition(Posi,TGrid,ii,jj)
-    TYPE(Point),INTENT(IN)::Posi
+    TYPE(TPoint),INTENT(IN)::Posi
     TYPE(Grid),INTENT(IN)::TGrid
     INTEGER(kind=it4b),INTENT(OUT):: ii,jj
     INTEGER(kind=it4b):: i,j
@@ -253,29 +282,29 @@ Module Particles
     end do
   End subroutine ParticlePosition
 
-  Subroutine ParticleInletCondition(PGrid,PCell,wave,TraPar)
+  Subroutine ParticleInletCondition(this, PGrid,PCell,wave)
     IMPLICIT NONE
+    CLASS(TParticle),INTENT(INOUT):: this
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(Cell),INTENT(IN):: PCell
     TYPE(TWave), INTENT(in) :: wave
-    TYPE(Particle),INTENT(INOUT):: TraPar
     INTEGER(KIND=it4b):: i,j
     REAL(KIND=dp),DIMENSION(:),allocatable:: ranum
-    allocate(ranum(NParInlet))
+    allocate(ranum(this%NParInlet))
     call Random_Number(ranum)
-    do i=TraPar%np+1,TraPar%np+NParInlet
-      TraPar%dp(i)=DParInlet*(ranum(i-TraPar%np)+1.d-3)
+    do i=this%np+1,this%np+this%NParInlet
+      this%dp(i) = this % DParInlet*(ranum(i-this%np)+1.d-3)
     end do
     call Random_Number(ranum)
-    do i=TraPar%np+1,TraPar%np+NParInlet
-      TraPar%Posp(i)%x=PGrid%x(1,1)+PGrid%dx(1,1)/3.d0
-      TraPar%Posp(i)%y=wave%Depthw-wave%Amp0*2.d0-HParInlet*ranum(i-TraPar%np)
+    do i=this%np+1,this%np+this%NParInlet
+      this%Posp(i)%x=PGrid%x(1,1)+PGrid%dx(1,1)/3.d0
+      this%Posp(i)%y=wave%Depthw-wave%Amp0*2.d0-this%HParInlet*ranum(i-this%np)
     end do
     call Random_Number(ranum)
-    do i=TraPar%np+1,TraPar%np+NParInlet
-      TraPar%uvp(i)%u=UParInlet*(ranum(i-TraPar%np)+0.5d0)
-      TraPar%uvp(i)%v=0.d0
+    do i=this%np+1,this%np+this%NParInlet
+      this%uvp(i)%u = this % UParInlet*(ranum(i-this%np)+0.5d0)
+      this%uvp(i)%v = 0.d0
     end do
-    TraPar%np=TraPar%np+NParInlet
+    this%np=this%np+this%NParInlet !FIXME: This does not make sense anymore, revise this and initialize
   End subroutine ParticleInletCondition
 End module Particles

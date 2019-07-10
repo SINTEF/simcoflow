@@ -6,9 +6,9 @@ Module Mesh
     INTEGER(kind=it4b),PRIVATE :: ight=1,jght=1
     INTEGER(kind=it4b),PRIVATE :: ibeg=1,jbeg=1
     INTEGER(kind=it4b),PRIVATE :: Isize,Jsize
-    TYPE,PUBLIC:: Point
+    TYPE :: TPoint
       REAL(KIND=dp)::x,y
-    End TYPE Point
+    End TYPE TPoint
 
     TYPE,PUBLIC:: Grid
       INTEGER*8:: Grid_Id
@@ -74,7 +74,11 @@ Module Mesh
     Interface TsimcoMesh
        Module procedure construct
     End interface
-    PUBLIC :: getMeshSizes
+
+    Interface TPoint
+       Module procedure construct_point
+    End interface
+    PUBLIC :: getMeshSizes, TPoint
     Contains
 
       !Assume ibeg and jbeg are constant equal 1 for now
@@ -275,7 +279,7 @@ Module Mesh
                                                      Lref,NonUniformMesh)
         IMPLICIT NONE
         CLASS(TsimcoMesh),INTENT(INOUT):: this
-        TYPE(Point),INTENT(IN)  :: Start_Point,End_Point,ReS,ReE
+        TYPE(TPoint),INTENT(IN)  :: Start_Point,End_Point,ReS,ReE
         REAL(KIND=dp),INTENT(IN):: Lref
         INTEGER(kind=it4b),INTENT(IN):: Irec,Jrec,NI,NJ
         INTEGER(kind=it4b),INTENT(IN):: NonUniformMesh
@@ -471,4 +475,10 @@ Module Mesh
           beta = beta-fx/dfx
         end do
       end subroutine
+      TYPE(TPoint) function construct_point(x, y) RESULT(this)
+        REAL(dp), INTENT(in) :: x, y
+        !
+        this % x = x
+        this % y = y
+      end function construct_point
 end module Mesh

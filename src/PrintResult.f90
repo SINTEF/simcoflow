@@ -42,7 +42,7 @@ Module PrintResult
       TYPE(Grid),INTENT(IN):: TGrid
       TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(Cell),INTENT(IN):: TCell
-      TYPE(Particle),INTENT(IN):: TraPar
+      TYPE(TParticle),INTENT(IN):: TraPar
       REAL(KIND=dp),INTENT(IN),DIMENSION(:,:,:),ALLOCATABLE:: FluxP
       INTEGER(kind=it8b),INTENT(IN):: iter
       INTEGER(kind=it4b),INTENT(IN):: PriPar
@@ -260,7 +260,7 @@ Module PrintResult
     SUBROUTINE ReadOldDataParticle(filename,TraPar,TVar)
       IMPLICIT NONE
       CHARACTER(LEN=80),INTENT(IN):: filename
-      TYPE(Particle),INTENT(INOUT):: TraPar
+      TYPE(TParticle),INTENT(INOUT):: TraPar
       TYPE(TVariables)             :: TVar
       INTEGER(KIND=it4b)          :: i,j
       CHARACTER(LEN=20)           :: read1,read2,read3,read4,read5

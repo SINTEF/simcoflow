@@ -39,11 +39,12 @@ Module Cutcell
         TYPE(Grid),INTENT(IN):: TGrid
         TYPE(Cell),INTENT(INOUT):: TCell
         INTEGER(it4b), INTENT(in) :: ibeg, jbeg, Isize, Jsize
-        TYPE(Point):: Pt(0:1,0:1),FaCe
+        TYPE(TPoint):: Pt(0:1,0:1),FaCe
         INTEGER(kind=it4b):: i,j,ii,jj,ctr
         REAL(KIND=dp):: Nodels(0:1,0:1),MaxFace,AverageArea
         REAL(KIND=dp):: dh,AverageFace,Roundoff
         REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: FCW,FCS
+        LOGICAL :: ICorProb
         allocate(FCW(Isize,Jsize,2))
         allocate(FCS(Isize,Jsize,2))
         Roundoff = 1.d-24
@@ -260,6 +261,7 @@ Module Cutcell
             end if
           end do
         end do
+        call getSolverVariables(ICorProb_=ICorProb)
         if((ICorProb.eqv..TRUE.).and.(.not.allocated(TCell%MoExCell))) then
           do i=1,Isize
             do j=1,Jsize-4
@@ -305,8 +307,8 @@ Module Cutcell
 
       SUBROUTINE Edge_Geo_Cal(Pt1,Pt2,nxx,nyy,diss,Edge_Area,FaCe)
         IMPLICIT NONE
-        TYPE(point),INTENT(IN)   :: Pt1,Pt2
-        TYPE(point),INTENT(OUT)  :: Face
+        TYPE(Tpoint),INTENT(IN)   :: Pt1,Pt2
+        TYPE(Tpoint),INTENT(OUT)  :: Face
         REAL(KIND=dp),INTENT(IN) :: nxx,nyy,diss
         REAL(KIND=dp),INTENT(OUT):: Edge_Area
         REAL(KIND=dp)            :: epsil,Lvs_Pt1,Lvs_Pt2
