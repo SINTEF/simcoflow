@@ -1,8 +1,7 @@
 Module PrintResult
     USE PrecisionVar
     USE Mesh
-    USE StateVariables, ONLY : TVariables,rey,xc,yc, &
-                               Fr,roref,Lref,dir
+    USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : pi, Ktw, roa, row
     USE Clsvof
     USE Cutcell
@@ -11,10 +10,11 @@ Module PrintResult
     USE Particles
     IMPLICIT NONE
     PRIVATE
+    CHARACTER*70,PRIVATE           ::dir
     character(len=1), PARAMETER :: newline=achar(10)
     PUBLIC:: Print_Result_Tecplot_PCent,Print_Result_Tecplot_UCent,            &
              Print_Result_Tecplot_VCent,Print_Result_VTK_2D,ReadOldDataPCell,  &
-             ReadOldDataVelocityCell,ReadOldDataParticle
+             ReadOldDataVelocityCell,ReadOldDataParticle, setDir, getDir
     Interface Print_Result_Tecplot_PCent
        Module procedure Print_Result_Tecplot_PCent
     End Interface Print_Result_Tecplot_PCent
@@ -36,6 +36,12 @@ Module PrintResult
     Interface ReadOldDataParticle
        Module procedure ReadOldDataParticle
     End interface
+    Interface getDir
+       Module procedure getDir
+    End interface getDir
+    Interface setDir
+       Module procedure setDir
+    End interface setDir
     Contains
     Subroutine Print_Result_Tecplot_PCent(TGrid,TVar,TCell,TraPar,FluxP,iter,PriPar)
       IMPLICIT NONE
@@ -91,8 +97,8 @@ Module PrintResult
                                              trim(curd)//'.txt',action='write')
         Write(5,*)'x,y,dp,up,vp'
         do i=1,Trapar%np
-          write(5,70) TraPar%Posp(i)%x/Lref,',',TraPar%Posp(i)%y/Lref,',',             &
-          TraPar%dp(i)/Lref,',',TraPar%uvp(i)%u/TVar%Uref,',',TraPar%uvp(i)%v/TVar%Uref
+          write(5,70) TraPar%Posp(i)%x/Tgrid%Lref,',',TraPar%Posp(i)%y/Tgrid%Lref,',',             &
+          TraPar%dp(i)/Tgrid%Lref,',',TraPar%uvp(i)%u/TVar%Uref,',',TraPar%uvp(i)%v/TVar%Uref
         enddo
         close(5)
       end if
@@ -102,9 +108,9 @@ Module PrintResult
                                                 'Particles_'//trim(curd)//'.dat',action='write')
         Write(5,*)'variables = "x","y","dp","up","vp"'
         Write(5,*)'zone f=block, i=',TraPar%np,'j=',1
-        Write(5,"(f24.14)")(TraPar%Posp(i)%x/Lref,i=1,TraPar%np)
-        Write(5,"(f24.14)")(TraPar%Posp(i)%y/Lref,i=1,TraPar%np)
-        Write(5,"(f24.14)")(TraPar%dp(i)/Lref,i=1,TraPar%np)
+        Write(5,"(f24.14)")(TraPar%Posp(i)%x/Tgrid%Lref,i=1,TraPar%np)
+        Write(5,"(f24.14)")(TraPar%Posp(i)%y/Tgrid%Lref,i=1,TraPar%np)
+        Write(5,"(f24.14)")(TraPar%dp(i)/Tgrid%Lref,i=1,TraPar%np)
         Write(5,"(f24.14)")(TraPar%uvp(i)%u/TVar%Uref,i=1,TraPar%np)
         Write(5,"(f24.14)")(TraPar%uvp(i)%v/TVar%Uref,i=1,TraPar%np)
         Close(5)
@@ -178,7 +184,7 @@ Module PrintResult
       TYPE(VTR_file_handle):: fd
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
-      call VTR_open_file(Prefix="FlowField",itera=itt,FD=fd)
+      call VTR_open_file(Prefix="FlowField",dir=dir, itera=itt,FD=fd)
     ! use keyword argument due to huge number of optional dummy argument
     ! so we need keyword argument to specify the location of actual argument
       call VTR_write_mesh(fd,TGrid%x(:,1),TGrid%y(1,:))
@@ -257,11 +263,12 @@ Module PrintResult
       close(5)
     END SUBROUTINE ReadOldDataVelocityCell
 
-    SUBROUTINE ReadOldDataParticle(filename,TraPar,TVar)
+    SUBROUTINE ReadOldDataParticle(filename,TraPar,TVar, Lref)
       IMPLICIT NONE
       CHARACTER(LEN=80),INTENT(IN):: filename
       TYPE(TParticle),INTENT(INOUT):: TraPar
       TYPE(TVariables)             :: TVar
+      REAL(dp),INTENT(in)          :: Lref
       INTEGER(KIND=it4b)          :: i,j
       CHARACTER(LEN=20)           :: read1,read2,read3,read4,read5
       open(unit=5,file=filename,action='read')
@@ -281,4 +288,16 @@ Module PrintResult
         TraPar%uvp(i)%v=TraPar%uvp(i)%v*TVar%Uref
       end do
     END SUBROUTINE ReadOldDataParticle
+
+    SUBROUTINE setDir(dir_)
+      !
+      CHARACTER*70,INTENT(in)   :: dir_
+      dir = dir_
+    END SUBROUTINE setDir
+
+    SUBROUTINE getDir(dir_)
+      !
+      CHARACTER*70,INTENT(out)   :: dir_
+      dir_ = dir
+    END SUBROUTINE getDir
 End module PrintResult

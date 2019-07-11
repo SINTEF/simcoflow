@@ -42,8 +42,8 @@ Module ComputePUV
       allocate(PU%Dp(ibeg-ight:jbeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
       allocate(PV%Dp(ibeg-ight:jbeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
       allocate(GradPUV(Isize,Jsize))
-      BetaP = 1.d0/(row/Roref)
-      BetaM = 1.d0/(roa/Roref)
+      BetaP = 1.d0/(row/TVar%Roref)
+      BetaM = 1.d0/(roa/TVar%Roref)
       Pred%u(:,:) = TVar%u(:,:)
       Pred%v(:,:) = TVar%v(:,:)
       tol=1.d-24

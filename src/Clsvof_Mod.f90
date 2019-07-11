@@ -2569,7 +2569,7 @@ Module Clsvof
         do j = jbeg,jbeg+Jsize-1
           if(VCell%VofS(i,j)>epsi.and.VCell%VofS(i,j)<1.d0-epsi.and.       &
                                                   VCell%MoExCell(i,j)/=1) then
-            Strf=(TVar%v(i,j)-BoomCase%vs)/Rey/VCell%delh(i,j)
+            Strf=(TVar%v(i,j)-BoomCase%vs)/TVar%Rey/VCell%delh(i,j)
             Area=PCell%WlLh(i,j)
             Clf=Clf+Strf*area
           end if

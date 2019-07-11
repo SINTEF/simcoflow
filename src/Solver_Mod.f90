@@ -52,8 +52,10 @@ Module Solver
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       INTEGER(it8b) :: IttRun
       LOGICAL :: RunAgain
+      CHARACTER*70 :: dir
       call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      call getDir(dir)
       allocate(Flux_n1(0:Isize+1,0:Jsize+1,2))
       Flux_n1(:,:,:)=0.d0
       allocate(GraP(1:Isize,1:Jsize))
@@ -104,12 +106,12 @@ Module Solver
         filename=trim(adjustl(dir))//'Tecplot/Vvelocity_'//trim(curd)//'.dat'
         call ReadOldDataVelocityCell(filename,simcomesh%VCell,TVar%v)
         filename=trim(adjustl(dir))//'Tecplot/Particles_'//trim(curd)//'.dat'
-        call ReadOldDataParticle(filename,TraPar,TVar)
+        call ReadOldDataParticle(filename,TraPar,TVar, simcomesh%PGrid%Lref)
         filename=trim(adjustl(dir))//'Convergence.dat'
         call ReadFileConvergence(filename,Time,PConv,BoomCase)
         BoomCase%XBar1=BoomCase%Posp%x-BoomCase%Wobj/2.d0
         BoomCase%XBar2=BoomCase%Posp%x+BoomCase%Wobj/2.d0
-        BoomCase%LBar=1.5d0/Lref
+        BoomCase%LBar=1.5d0/simcomesh%PGrid%Lref
         BoomCase%YBar=BoomCase%Posp%y-dsqrt((BoomCase%Dobj/2.d0)**2.d0-        &
                  (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
 
@@ -161,7 +163,6 @@ Module Solver
     !    call PrintWaterHeight(Time%NonDiT,I1,I2,I3,I4,PGrid,PCell)
     !    call PrintWaterPressure(Time%NonDiT,J1,J2,J3,J4,TVar)
         call PrintHistory(itt,Time,PConv,BoomCase)
-        ite = INT(itt)
         if(mod(itt,iprint1)==0)then
           write(*,*), itt,Time%PhysT,Time%NondiT
           call Print_Result_Tecplot_PCent(simcomesh%PGrid,TVar,simcomesh%PCell,TraPar,Flux_n1,itt,1)
@@ -198,8 +199,10 @@ Module Solver
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       INTEGER(it8b) :: IttRun
       LOGICAL :: RunAgain
+      CHARACTER*70 :: dir
       call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      call getDir(dir)
       if(itt==1) then
         BoomCase%us=0.d0
         BoomCase%vs=0.d0
@@ -275,7 +278,7 @@ Module Solver
           Time%dt=dmin1(Time%dt,Time%cfl*Ugrid%dx(i,j)/dabs(TVar%u(i,j)))
           Time%dt=dmin1(Time%dt,Time%cfl*VGrid%dy(i,j)/dabs(TVar%v(i,j)))
           Time%dt=dmin1(Time%dt,2.d0*Time%cfl*VGrid%dy(i,j)/(dabs(TVar%v(i,j))+&
-                         dsqrt(TVar%v(i,j)**2.d0+4.d0*VGrid%dy(i,j)/Fr)),      &
+                         dsqrt(TVar%v(i,j)**2.d0+4.d0*VGrid%dy(i,j)/TVar%Fr)),      &
                                 Time%cfl*Vgrid%dy(i,j)/(TVar%Vint/TVar%Uref))
           Time%dt=dmin1(Time%dt,Time%cfl*Vgrid%dy(i,j)/(TVar%Vint/TVar%Uref))
           Time%dt=dmin1(Time%dt,Time%cfl*Vgrid%dy(i,j)/dabs(BoomCase%vs))
@@ -293,6 +296,8 @@ Module Solver
       TYPE(SolverTime),INTENT(IN)       :: Time
       TYPE(SolverConvergence),INTENT(IN):: TNorm
       TYPE(SolidObject),INTENT(IN)      :: BoomCase
+      CHARACTER*70 :: dir
+      call getDir(dir)
       open(unit=5,file=trim(adjustl(dir))//'Convergence.dat',access='append')
       write(5,76) itt,Time%NondiT,TNorm%N1,TNorm%N2,TNorm%Ninf,TNorm%N1c,      &
                      TNorm%N2c,TNorm%Ninfc,BoomCase%Posp%y,                    &
@@ -469,6 +474,8 @@ Module Solver
       INTEGER(kind=it4b):: j
       REAL(KIND=dp):: H1,H2,H3,H4
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      CHARACTER*70 :: dir
+      call getDir(dir)
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do j = 1,Jsize
         if(PCell%vof(I1,j)>epsi.and.PCell%vof(I1,j)<1.d0-epsi) then
@@ -498,7 +505,9 @@ Module Solver
       character(len=250):: curd
       REAL(KIND=dp):: VolPrint,XPrint,HPrint,tol,Hmax
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      CHARACTER*70 :: dir
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      call getDir(dir)
 
       tol=1.d-24
       write(curd,'(f15.8)') TimePrint
@@ -535,7 +544,9 @@ Module Solver
       TYPE(TVariables),INTENT(IN):: Var
       REAL(KIND=dp):: P1,P2,P3,P4
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      CHARACTER*70 :: dir
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      call getDir(dir)
       P1=Var%p(Isize,J1)
       P2=Var%p(Isize,J2)
       P3=Var%p(Isize,J3)

@@ -285,7 +285,7 @@ Module Mesh
         INTEGER(kind=it4b),INTENT(IN):: NonUniformMesh
         !
         REAL(KIND=dp),DIMENSION(:),allocatable:: x,y
-        INTEGER:: i,j,IJsizeS,IJsizeE, ibeg, jbeg
+        INTEGER:: i,j,IJsizeS,IJsizeE
         REAL(KIND=dp):: beta,dx,dy,dl
         allocate(x(NI))
         allocate(y(NJ))

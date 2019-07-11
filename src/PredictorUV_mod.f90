@@ -3,7 +3,7 @@ Module PredictorUV
     USE Mesh
     USE Cutcell
     USE Clsvof
-    USE StateVariables, ONLY : TVariables, nuref, rey, roref, fr
+    USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : pi, epsi, nua, nuw, roa, row, BetaVis
     USE Printresult
     USE MPI
@@ -96,10 +96,10 @@ Module PredictorUV
       Vvolf=>VCellO%vof
       do i=1,Isize
         do j=1,Jsize
-          Uro(i,j)=(1.d0-Uvolf(i,j)-UCell%vofS(i,j))*roa/Roref+Uvolf(i,j)*      &
-                                                                  row/Roref
-          Vro(i,j)=(1.d0-Vvolf(i,j)-VCell%vofS(i,j))*roa/Roref+Vvolf(i,j)*      &
-                                                                      row/Roref
+          Uro(i,j)=(1.d0-Uvolf(i,j)-UCell%vofS(i,j))*roa/TVar%Roref+Uvolf(i,j)*      &
+                                                                  row/TVar%Roref
+          Vro(i,j)=(1.d0-Vvolf(i,j)-VCell%vofS(i,j))*roa/TVar%Roref+Vvolf(i,j)*      &
+                                                                      row/TVar%Roref
         end do
       end do
       do i=1,TraPar%np
@@ -135,8 +135,8 @@ Module PredictorUV
           MoParExIJV(i,2)=MoParExIJV(i-1,2)
         end if
       end do
-      BetaP=1.d0/(row/Roref)
-      BetaM=1.d0/(roa/Roref)
+      BetaP=1.d0/(row/TVar%Roref)
+      BetaM=1.d0/(roa/TVar%Roref)
 !     Step 1: Calculate the convective coefficient
       if(itt==1) then
         call ModifiedConvectiveFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,    &
@@ -158,18 +158,18 @@ Module PredictorUV
 !      call HighOrderDensityBasedConvFluxYDir(PGrid,UGrid,VGrid,PCell,UCell,    &
 !                                      VCell,Uro,Vro,ConfluxNS,MaFluxNS,dt)
       call FaceDensityFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,MaFluxEW,    &
-                                             VofFluxEW,BoomCase%vs,dt,1,0)
+                                             VofFluxEW,BoomCase%vs,dt,1,0, TVar%Roref)
       call FaceDensityFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,MaFluxNS,    &
-                                             VofFluxNS,BoomCase%vs,dt,0,1)
+                                             VofFluxNS,BoomCase%vs,dt,0,1, TVar%Roref)
       call DensityBasedConvectiveFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,  &
-                                      ConFluxEW,VofFluxEW,BoomCase%vs,1,0)
+                                      ConFluxEW,VofFluxEW,BoomCase%vs,1,0, TVar%Roref)
       call DensityBasedConvectiveFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,  &
-                                      ConFluxNS,VofFluxNS,BoomCase%vs,0,1)
+                                      ConFluxNS,VofFluxNS,BoomCase%vs,0,1, TVar%Roref)
 !     Step 2: Calculate the diffusive coefficient
       call DiffusiveFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,DifFluxEW,     &
-                                           EDFluxEW,ExEDFluxEW,BoomCase%vs,1,0)
+                                           EDFluxEW,ExEDFluxEW,BoomCase%vs,1,0, TVar%Rey, TVar%nuref)
       call DiffusiveFlux(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,DifFluxNS,     &
-                                           EDFluxNS,ExEDFluxNS,BoomCase%vs,0,1)
+                                           EDFluxNS,ExEDFluxNS,BoomCase%vs,0,1, TVar%Rey, TVar%nuref)
 !     Step 3: Calculate source term coefficient as wall function
 !     for U Cell
       do i = 1,Isize-1
@@ -181,15 +181,15 @@ Module PredictorUV
             Fw=ConFluxEW(i,j,1)
             Fn=ConFluxNS(i,j+1,1)
             Fs=ConFluxNS(i,j,1)
-            RoCeO=(1.d0-Uvolf(i,j)-UCell%vofS(i,j))*roa/Roref+Uvolf(i,j)*      &
-                                                                  row/Roref
+            RoCeO=(1.d0-Uvolf(i,j)-UCell%vofS(i,j))*roa/TVar%Roref+Uvolf(i,j)*      &
+                                                                  row/TVar%Roref
             RoCeN=RoCeO-dt*(MaFluxEW(i+1,j,1)-MaFluxEW(i,j,1)+                 &
                             MaFluxNS(i,j+1,1)-MaFluxNS(i,j,1))/                &
                                               (UGrid%dx(i,j)*UGrid%dy(i,j))
-            if(RoCeN>(1.d0+epsi-UCell%vofS(i,j))*roa/Roref.and.                &
-               RoCeN<(1.d0-epsi-UCell%vofS(i,j))*row/Roref.and.                &
-               RoCeO>(1.d0+epsi-UCell%vofS(i,j))*roa/Roref.and.                &
-               RoCeO<(1.d0-epsi-UCell%vofS(i,j))*row/Roref.and.                &
+            if(RoCeN>(1.d0+epsi-UCell%vofS(i,j))*roa/TVar%Roref.and.                &
+               RoCeN<(1.d0-epsi-UCell%vofS(i,j))*row/TVar%Roref.and.                &
+               RoCeO>(1.d0+epsi-UCell%vofS(i,j))*roa/TVar%Roref.and.                &
+               RoCeO<(1.d0-epsi-UCell%vofS(i,j))*row/TVar%Roref.and.                &
                UCell%vofS(i,j)<epsi)then
               Fluxn0=(Fe-Fw+Fn-Fs)/RoCeN+u(i,j)*(1.d0-RoCeO/RoCeN)/dt*         &
                                                 UGrid%dx(i,j)*UGrid%dy(i,j)
@@ -198,13 +198,13 @@ Module PredictorUV
                       CFluxNS(i,j,1))/(1.d0-UCell%vofS(i,j))
 
             end if
-            if(((RoCeN>(1.d0+epsi-UCell%vofS(i,j))*roa/Roref.and.              &
-                RoCeN<(1.d0-epsi-UCell%vofS(i,j))*row/Roref.and.               &
-                RoCeO>(1.d0+epsi-UCell%vofS(i,j))*roa/Roref.and.               &
-                RoCeO<(1.d0-epsi-UCell%vofS(i,j))*row/Roref.and.               &
+            if(((RoCeN>(1.d0+epsi-UCell%vofS(i,j))*roa/TVar%Roref.and.              &
+                RoCeN<(1.d0-epsi-UCell%vofS(i,j))*row/TVar%Roref.and.               &
+                RoCeO>(1.d0+epsi-UCell%vofS(i,j))*roa/TVar%Roref.and.               &
+                RoCeO<(1.d0-epsi-UCell%vofS(i,j))*row/TVar%Roref.and.               &
                 UCell%vofS(i,j)<epsi).or.                                      &
-                RoCeN<(1.d0+epsi-UCell%vofS(i,j))*roa/Roref.or.                &
-                RoCeN>(1.d0-epsi-UCell%vofS(i,j))*row/Roref))  then
+                RoCeN<(1.d0+epsi-UCell%vofS(i,j))*roa/TVar%Roref.or.                &
+                RoCeN>(1.d0-epsi-UCell%vofS(i,j))*row/TVar%Roref))  then
               Order2rd=1
             else
               Order2rd=0
@@ -329,15 +329,15 @@ Module PredictorUV
             Fw=ConFluxEW(i,j,2)
             Fn=ConFluxNS(i,j+1,2)
             Fs=ConFluxNS(i,j,2)
-            RoCeO=(1.d0-Vvolf(i,j)-VCell%vofS(i,j))*roa/Roref+Vvolf(i,j)*      &
-                                                                      row/Roref
+            RoCeO=(1.d0-Vvolf(i,j)-VCell%vofS(i,j))*roa/TVar%Roref+Vvolf(i,j)*      &
+                                                                      row/TVar%Roref
             RoCeN=RoCeO-dt*(MaFluxEW(i+1,j,2)-MaFluxEW(i,j,2)+                 &
                             MaFluxNS(i,j+1,2)-MaFluxNS(i,j,2))/                &
                                               (VGrid%dx(i,j)*VGrid%dy(i,j))
-            if(RoCeN>(1.d0+epsi-VCell%vofS(i,j))*roa/Roref.and.                &
-               RoCeN<(1.d0-epsi-VCell%vofS(i,j))*row/Roref.and.                &
-               RoCeO>(1.d0+epsi-VCell%vofS(i,j))*roa/Roref.and.                &
-               RoCeO<(1.d0-epsi-VCell%vofS(i,j))*row/Roref.and.                &
+            if(RoCeN>(1.d0+epsi-VCell%vofS(i,j))*roa/TVar%Roref.and.                &
+               RoCeN<(1.d0-epsi-VCell%vofS(i,j))*row/TVar%Roref.and.                &
+               RoCeO>(1.d0+epsi-VCell%vofS(i,j))*roa/TVar%Roref.and.                &
+               RoCeO<(1.d0-epsi-VCell%vofS(i,j))*row/TVar%Roref.and.                &
                VCell%vofS(i,j)<epsi) then
               Fluxn0=(Fe-Fw+Fn-Fs)/RoCeN+v(i,j)*(1.d0-RoCeO/RoCeN)/dt*         &
                                             VGrid%dx(i,j)*VGrid%dy(i,j)
@@ -345,13 +345,13 @@ Module PredictorUV
               Fluxn0=(CFluxEW(i+1,j,2)-CFluxEW(i,j,2)+CFluxNS(i,j+1,2)-        &
                                        CFluxNS(i,j,2))/(1.d0-VCell%VofS(i,j))
             end if
-            if(((RoCeN>(1.d0+epsi-VCell%vofS(i,j))*roa/Roref.and.              &
-                RoCeN<(1.d0-epsi-VCell%vofS(i,j))*row/Roref.and.               &
-                RoCeO>(1.d0+epsi-VCell%vofS(i,j))*roa/Roref.and.               &
-                RoCeO<(1.d0-epsi-VCell%vofS(i,j))*row/Roref.and.               &
+            if(((RoCeN>(1.d0+epsi-VCell%vofS(i,j))*roa/TVar%Roref.and.              &
+                RoCeN<(1.d0-epsi-VCell%vofS(i,j))*row/TVar%Roref.and.               &
+                RoCeO>(1.d0+epsi-VCell%vofS(i,j))*roa/TVar%Roref.and.               &
+                RoCeO<(1.d0-epsi-VCell%vofS(i,j))*row/TVar%Roref.and.               &
                 VCell%vofS(i,j)<epsi).or.                                      &
-                RoCeN<(1.d0+epsi-VCell%vofS(i,j))*roa/Roref.or.                &
-                RoCeN>(1.d0-epsi-VCell%vofS(i,j))*row/Roref)) then
+                RoCeN<(1.d0+epsi-VCell%vofS(i,j))*roa/TVar%Roref.or.                &
+                RoCeN>(1.d0-epsi-VCell%vofS(i,j))*row/TVar%Roref)) then
               Order2rd=1
             else
               Order2rd=0
@@ -405,8 +405,8 @@ Module PredictorUV
             if(VCell%VofS(i,j)>epsi.and.VCell%VofS(i,j)<1.d0-epsi) then
               !*dabs(VCell%nx(i,j))
               FluxDiv(i,j,2)=FluxDiv(i,j,2)-((1.d0-VCell%vof(i,j)/             &
-                            (1.d0-VCell%vofS(i,j)))*nua/nuref+VCell%vof(i,j)/  &
-                            (1.d0-VCell%vofS(i,j))*nuw/nuref)/Rey*             &
+                            (1.d0-VCell%vofS(i,j)))*nua/TVar%nuref+VCell%vof(i,j)/  &
+                            (1.d0-VCell%vofS(i,j))*nuw/TVar%nuref)/TVar%Rey*             &
                             VCell%WlLh(i,j)/VCell%delh(i,j)*BoomCase%vs
             end if
             if(isnan(FluxDiv(i,j,2)).or.dabs(Fluxdiv(i,j,2))>1.d20) then
@@ -502,15 +502,15 @@ Module PredictorUV
       Uvolf=>UCell%vof
       Vvolf=>VCell%vof
       call DiffusiveFlux(PGrid,UGrid,VGrid,PCell,UCell,VCell,DifFluxEW,        &
-                                           EDFluxEW,ExEDfluxEW,BoomCase%vs,1,0)
+                                           EDFluxEW,ExEDfluxEW,BoomCase%vs,1,0, TVar%Rey, TVar%nuref)
       call DiffusiveFlux(PGrid,UGrid,VGrid,PCell,UCell,VCell,DifFluxNS,        &
-                                           EDFluxNS,ExEDfluxEW,BoomCase%vs,0,1)
+                                           EDFluxNS,ExEDfluxEW,BoomCase%vs,0,1, TVar%Rey, TVar%nuref)
       nullify(Uvolf,Vvolf)
       call SetBasicSolver(solver,precond)
       call SetMatrix(A,parcsr_A,UGrid,UCell,DifFluxEW,DifFluxNS,EDFluxEW,      &
-                                EDFluxNS,PU,UWE,USN,matr,itt,dt,1,0)
+                                EDFluxNS,PU,UWE,USN,matr,itt,dt,1,0, TVar%Rey, TVar%nuref)
       call SetVectors(b,x,par_b,par_x,PGrid,UGrid,UCell,UWE,USN,FluxDiv(:,:,1),&
-                                                     rhm,dt,1,0)
+                                                     rhm,dt,1,0, TVar%Roref, TVar%Fr)
       call HYPRE_ParCSRPCGSetup(solver,parcsr_A,par_b,par_x,ierr)
       call HYPRE_ParCSRPCGSolve(solver,parcsr_A,par_b,par_x,ierr)
     ! Run info - needed logging turned on
@@ -531,9 +531,9 @@ Module PredictorUV
     ! For VCell
       call SetBasicSolver(solver,precond)
       call SetMatrix(A,parcsr_A,VGrid,VCell,DifFluxEW,DifFluxNS,EDFluxEW,      &
-                                EDFluxNS,PV,VWE,VSN,matr,itt,dt,0,1)
+                                EDFluxNS,PV,VWE,VSN,matr,itt,dt,0,1, TVar%Rey, TVar%nuref)
       call SetVectors(b,x,par_b,par_x,PGrid,VGrid,VCell,VWE,VSN,FluxDiv(:,:,2),&
-                                                                   rhm,dt,0,1)
+                                                                   rhm,dt,0,1, TVar%Roref, TVar%Fr)
       call HYPRE_ParCSRPCGSetup(solver,parcsr_A,par_b,par_x,ierr)
       call HYPRE_ParCSRPCGSolve(solver,parcsr_A,par_b,par_x,ierr)
     ! Run info - needed logging turned on
@@ -622,13 +622,13 @@ Module PredictorUV
     End subroutine SetBasicSolver
 
     subroutine SetMatrix(A,parcsr_A,TGrid,TCell,DifFluxEW,DifFluxNS,EDFluxEW,  &
-                         EDFluxNS,PUV,CWE,CSN,matr,itt,dt,iu,iv)
+                         EDFluxNS,PUV,CWE,CSN,matr,itt,dt,iu,iv, Rey, nuref)
         IMPLICIT NONE
         INTEGER*8,INTENT(INOUT):: A,parcsr_A
         TYPE(Grid),INTENT(IN):: TGrid
         TYPE(Cell),INTENT(IN):: TCell
         INTEGER(kind=it8b),INTENT(IN):: itt
-        REAL(KIND=dp),INTENT(IN):: dt
+        REAL(KIND=dp),INTENT(IN):: dt, Rey, nuref
         REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(IN):: DifFluxEW,     &
                                                    DifFluxNS,EDFluxEW,EDFluxNS
         TYPE(PoissonCoefficient),INTENT(INOUT):: PUV
@@ -772,7 +772,7 @@ Module PredictorUV
     end subroutine SetMatrix
 
     subroutine SetVectors(b,x,par_b,par_x,PGrid,TGrid,TCell,CWE,CSN,IJFlux,    &
-                                                            rhm,dt,iu,iv)
+                                                            rhm,dt,iu,iv, Roref, Fr)
         INTEGER*8:: b,x,par_b,par_x
         INTEGER,INTENT(IN):: iu,iv
         TYPE(Grid),INTENT(IN):: PGrid,TGrid
@@ -780,6 +780,7 @@ Module PredictorUV
         REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: CWE,CSN
         REAL(KIND=dp),DIMENSION(:,:),INTENT(IN):: IJFlux
         REAL(KIND=dp),DIMENSION(:,:),INTENT(INOUT):: rhm
+        REAL(dp), INTENT(in) :: Roref, Fr
         real(dp),INTENT(IN):: dt
         INTEGER(kind=it4b):: i,j
         INTEGER:: ilower,iupper,ictr,local_size
@@ -1445,13 +1446,14 @@ Module PredictorUV
     end subroutine HighOrderConvectiveFluxForYDir
 
     subroutine HighOrderDensityBasedConvFluxXDir(PGrid,UGrid,VGrid,PCell,UCell,&
-                                      VCell,Uro,Vro,flux,Vflux,dt)
+                                      VCell,Uro,Vro,flux,Vflux,dt, Roref)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: Uro,Vro
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Vflux,flux
-      REAL(KIND=dp),INTENT(IN):: dt
+      REAL(KIND=dp),INTENT(IN) :: dt
+      REAL(dp),     INTENT(in) :: Roref
       INTEGER(kind=it4b):: i,j,Lim
       REAL(KIND=dp):: ul,ur,vl,vr,alr,volf,vols,rolr,rol,ror,uw
       REAL(KIND=dp):: omei,omei1,ri,ri1,tolim,tol
@@ -1608,13 +1610,14 @@ Module PredictorUV
     end subroutine HighOrderDensityBasedConvFluxXDir
 
     subroutine HighOrderDensityBasedConvFluxYDir(PGrid,UGrid,VGrid,PCell,UCell,&
-                                      VCell,Uro,Vro,flux,Vflux,dt)
+                                      VCell,Uro,Vro,flux,Vflux,dt, Roref)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: Uro,Vro
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Vflux,flux
       REAL(KIND=dp),INTENT(IN):: dt
+      REAL(dp), INTENT(in) :: Roref
       INTEGER(kind=it4b):: i,j,Lim
       REAL(KIND=dp):: ul,ur,vl,vr,alr,rolr,rol,ror,volf,vols,vs
       REAL(KIND=dp):: omei,omei1,ri,ri1,tolim,tol
@@ -1769,13 +1772,14 @@ Module PredictorUV
 
 !   in this subroutine the face area should be took into account
     subroutine DensityBasedConvectiveFlux(PGrid,UGrid,VGrid,PCell,UCell,VCell, &
-                                          flux,Vflux,vb,idir,jdir)
+                                          flux,Vflux,vb,idir,jdir, Roref)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
       INTEGER(kind=it4b),INTENT(IN):: idir,jdir
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT)::flux,Vflux
       REAL(KIND=dp),INTENT(IN):: vb
+      REAL(dp),     INTENT(in) :: Roref
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: uw,vs,uwn,uwp,vsn,vsp
       REAL(KIND=dp):: eta,Sx,Sy
@@ -1891,7 +1895,7 @@ Module PredictorUV
     end subroutine DensityBasedConvectiveFlux
 
     subroutine FaceDensityFlux(PGrid,UGrid,VGrid,PCell,UCell,VCell,            &
-                                      flux,Vflux,vb,dt,idir,jdir)
+                                      flux,Vflux,vb,dt,idir,jdir, Roref)
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
@@ -1899,6 +1903,7 @@ Module PredictorUV
       REAL(KIND=dp),INTENT(IN):: dt
       REAL(KIND=dp),INTENT(IN):: vb
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT)::flux,VFlux
+      REAL(dp), INTENT(in) :: Roref
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: uw,vs,uwn,uwp,vsn,vsp,VofFace,diss,nxx,nyy
       REAL(KIND=dp):: eta,Sx,Sy,volf,vols
@@ -2053,10 +2058,10 @@ Module PredictorUV
     end subroutine FaceDensityFlux
 
     SUBROUTINE DiffusiveFlux(PGrid,UGrid,VGrid,PCell,UCell,VCell,flux,Eflux,   &
-                                                     ExEFlux,vb,idir,jdir)
+                                                     ExEFlux,vb,idir,jdir, Rey, nuref)
       IMPLICIT NONE
       INTEGER(kind=it4b),INTENT(IN):: idir,jdir
-      REAL(KIND=dp),INTENT(IN):: vb
+      REAL(KIND=dp),INTENT(IN):: vb, Rey, nuref
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
       INTEGER(kind=it4b):: i,j

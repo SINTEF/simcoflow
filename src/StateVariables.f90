@@ -4,30 +4,19 @@ Module StateVariables
     USE Mesh
     IMPLICIT NONE
     PRIVATE
-    INTEGER(kind=it4b),PUBLIC::ite
-    REAL(KIND=dp),PUBLIC::Lref,Rey,Fr,wa,Ta,xc,yc,UwInlet,UgInlet,             &
-                          xmax,Roref,Hw,Ha,nuref
 !   for run again from
     LOGICAL :: RunAgain
     LOGICAL :: ICorProb
     INTEGER(it8b) :: IttRun
-!    INTEGER(KIND=it8b),PUBLIC::IttRun,IttBegin
-!    LOGICAL,PUBLIC:: RunAgain,ICorProb
-!   For particles from 3D to 2D
-!    REAL(KIND=dp),PUBLIC::zp,UParInlet,HParInlet,DParInlet,rop,gx,gy
-!   For number of particles into system
-!    INTEGER(kind=it4b),PUBLIC:: NParInlet,IParInlet
-!   For Water Entry problem
-    REAL(KIND=dp),PUBLIC::y0,y1
 !   For Wave Braking on vertical wall
     TYPE :: TWave
      REAL(KIND=dp) :: t0,cw0,Amp0,Depthw,Lamdaw,twp,HChannel,              &
                       LChannel,kw,omew,HDomain
     END TYPE TWave
-    CHARACTER*70,PUBLIC           ::dir
     TYPE :: TVariables
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: u,v,p,t,Gpu,Gpv,ures,vres,pres,mres
       REAL(KIND=dp):: Uint,Vint,Pint,Tint,Uref,Roref,Pref,Tref
+      REAL(dp) :: UwInlet, UgInlet, Rey, Fr, nuref
     CONTAINS
       PROCEDURE, PASS(thiS), PUBLIC :: Initialize
     END TYPE TVariables
@@ -54,7 +43,7 @@ Module StateVariables
     TYPE(TVariables) function constructVar() result( this )
       !
       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
-      call getMeshSizes(ibeg, jbeg, ighte=ight, jghte=jght)
+      call getMeshSizes(ibeg, jbeg, Isizee=Isize, Jsizee=Jsize, ighte=ight, jghte=jght)
       allocate(this%u(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
       allocate(this%v(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
       allocate(this%p(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
@@ -67,11 +56,13 @@ Module StateVariables
       allocate(this%t(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
     end function constructVar
 
-    subroutine Initialize(this, wave, simcomesh, PCell,PGrid,Uint,Vint,Pint,Tint,Uref,Tref,Roref,Lref)
+    subroutine Initialize(this, wave, simcomesh, PCell,PGrid,Uint,Vint,Pint,&
+         &                Tint,Uref,Tref,Roref,Lref, nuref, ha, UwInlet, UgInlet )
       class(TVariables),INTENT(INOUT) :: this
       TYPE(TWave), INTENT(in)         :: wave
       TYPE(TsimcoMesh), INTENT(in) :: simcomesh
-      REAL(KIND=dp),INTENT(IN):: Uint,Vint,Pint,Tint,Uref,Tref,Roref,Lref
+      REAL(KIND=dp),INTENT(IN):: Uint,Vint,Pint,Tint,Uref,Tref,Roref,Lref, nuref,ha
+      REAL(dp),  INTENT(in) :: UwInlet, UgInlet
       TYPE(Cell),INTENT(IN):: PCell
       TYPE(Grid),INTENT(IN):: PGrid
       INTEGER(kind=it4b):: i,j, ibeg, jbeg, Isize, Jsize
@@ -125,16 +116,16 @@ Module StateVariables
           end if
         end do
       end do
-      Rey=Uref*Lref/nuref
-      Fr=Uref/dsqrt(g*Lref)
-      print*,"Reynolds number:",Rey
-      print*,"Froude number:",Fr
+      this%Rey=Uref*Lref/nuref
+      this%Fr=Uref/dsqrt(g*Lref)
+      print*,"Reynolds number:",this%Rey
+      print*,"Froude number:",this%Fr
    !   call Boundary_Condition_Var(PGrid,PCell,this,0.d0)
     end subroutine Initialize
 
     ! This is kind of artificial
     TYPE(TWave) function constructWave(t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, &
-         &                             LChannel, kw, omew, HDomain) RESULT ( this )
+         &                             LChannel, kw, omew, HDomain ) RESULT ( this )
       REAL(dp), INTENT(in) :: t0
       REAL(dp), INTENT(in) :: cw0
       REAL(dp), INTENT(in) :: Amp0
@@ -213,37 +204,37 @@ Module StateVariables
         Vari%p(ibeg-ight,j)=Vari%p(ibeg,j) !Vari%Pint/(Vari%Pref)
         Vari%t(ibeg-ight,j)=Vari%t(ibeg,j)
         if(PGrid%y(1,j)-Hwin<ywu) then
-          Vari%u(ibeg-ight,j)=UwInlet-wave%Amp0*wave%kw*(UwInlet-wave%cw0)*                   &
+          Vari%u(ibeg-ight,j)=Vari%UwInlet-wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*                   &
                     dsin(wave%kw*(xwu-wave%cw0*Time))*dcosh(wave%kw*PGrid%y(1,j))/dsinh(wave%kw*Hwin)
         else
-          Vari%u(ibeg-ight,j)=UgInlet+wave%Amp0*wave%kw*(UgInlet-wave%cw0)*                   &
+          Vari%u(ibeg-ight,j)=Vari%UgInlet+wave%Amp0*wave%kw*(Vari%UgInlet-wave%cw0)*                   &
           dsin(wave%kw*(xwu-wave%cw0*Time))*dcosh(wave%kw*(PGrid%y(1,j)-wave%HChannel))/dsinh(wave%kw*Hain)
         end if
 
         if(PGrid%y(1,j)-Hwin<ywv) then
-          Vari%v(ibeg-ight,j)=wave%Amp0*wave%kw*(UwInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*   &
+          Vari%v(ibeg-ight,j)=wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*   &
                   dsinh(wave%kw*(PGrid%y(1,j)+0.5d0*PGrid%dy(1,j)))/dsinh(wave%kw*Hwin)
         else
-          Vari%v(ibeg-ight,j)=-wave%Amp0*wave%kw*(UgInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*  &
+          Vari%v(ibeg-ight,j)=-wave%Amp0*wave%kw*(Vari%UgInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*  &
               dsinh(wave%kw*(PGrid%y(1,j)+0.5d0*PGrid%dy(1,j)-wave%HChannel))/dsinh(wave%kw*Hain)
         end if
 
       ! Right outlet water
       !  if(PGrid%y(Isize,j)-Hwout<ywuout) then
         if(PCell%vof(isize,j)>0.5d0) then
-          Vari%u(Isize,j)=UwInlet!-Amp0*kw*(UwInlet-cw0)*                       &
+          Vari%u(Isize,j)=Vari%UwInlet!-Amp0*kw*(Vari%UwInlet-cw0)*                       &
             ! dsin(kw*(xwuout-cw0*Time))*dcosh(kw*PGrid%y(Isize,j))/dsinh(kw*Hwout)
         else
-          Vari%u(Isize,j)=UgInlet  !+Amp0*kw*(UgInlet-cw0)*                       &
+          Vari%u(Isize,j)=Vari%UgInlet  !+Amp0*kw*(Vari%UgInlet-cw0)*                       &
             ! dsin(kw*(xwuout-cw0*Time))*dcosh(kw*(PGrid%y(Isize,j)-HChannel))/ &
             !                                                     dsinh(kw*Haout)
         end if
 
         if(PGrid%y(Isize,j)-Hwout<ywvout) then
-          Vari%v(Isize+1,j)=wave%Amp0*wave%kw*(UwInlet-wave%cw0)*dcos(wave%kw*(xwvout-wave%cw0*Time))*  &
+          Vari%v(Isize+1,j)=wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dcos(wave%kw*(xwvout-wave%cw0*Time))*  &
               dsinh(wave%kw*(PGrid%y(Isize,j)+0.5d0*PGrid%dy(Isize,j)))/dsinh(wave%kw*Hwout)
         else
-          Vari%v(Isize+1,j)=-wave%Amp0*wave%kw*(UgInlet-wave%cw0)*dcos(wave%kw*(xwvout-wave%cw0*Time))* &
+          Vari%v(Isize+1,j)=-wave%Amp0*wave%kw*(Vari%UgInlet-wave%cw0)*dcos(wave%kw*(xwvout-wave%cw0*Time))* &
               dsinh(wave%kw*(PGrid%y(Isize,j)+0.5d0*PGrid%dy(Isize,j)-wave%HChannel))/   &
                                                                   dsinh(wave%kw*Haout)
         end if
@@ -258,10 +249,10 @@ Module StateVariables
         Vari%t(i,jbeg-jght)=Vari%t(i,jbeg)
         Vari%u(i,jbeg-jght)=Vari%u(i,jbeg)
         xwu=PGrid%x(i,1)+PGrid%dx(i,1)/2.d0
-        Vari%u(i,jbeg-jght)=-wave%Amp0*wave%kw*(UwInlet-wave%cw0)*dsin(wave%kw*(xwu-wave%cw0*Time))*    &
+        Vari%u(i,jbeg-jght)=-wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dsin(wave%kw*(xwu-wave%cw0*Time))*    &
                         dcosh(wave%kw*(PGrid%y(i,1)-PGrid%dy(i,1)))/dsinh(wave%kw*wave%Depthw)
         xwv=PGrid%x(i,1)
-        Vari%v(i,jbeg-jght)=wave%Amp0*wave%kw*(UwInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*    &
+        Vari%v(i,jbeg-jght)=wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*    &
                   dsinh(wave%kw*(PGrid%y(i,1)-0.5d0*PGrid%dy(i,1)))/dsinh(wave%kw*wave%Depthw) !0.d0 !Vari%Vint/Vari%Uref
       ! Open air
         Vari%p(i,Jsize+jbeg+jght-1)=0.d0

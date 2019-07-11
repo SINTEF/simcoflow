@@ -18,10 +18,8 @@ Program Main
     USE Clsvof, ONLY : SolidObject, Initial_Clsvof
     USE StateVariables, ONLY : TVariables, TWave, setSolverVariables
     !Global variables that needs to be fixed:
-    USE StateVariables, ONLY : dir, uwinlet, uginlet, roref, rey, nuref, lref
-    USE StateVariables, ONLY : ha, hw
     USE Constants, ONLY : g, pi, nuw, row
-    USE PrintResult, ONLY : Print_Result_Tecplot_PCent, Print_Result_Tecplot_UCent, Print_Result_Tecplot_VCent
+    USE PrintResult, ONLY : Print_Result_Tecplot_PCent, Print_Result_Tecplot_UCent, Print_Result_Tecplot_VCent, setDir
     USE MPI, ONLY : MPI_Initial
     USE Solver, ONLY : IterationSolution
     USE Particles, ONLY : TParticle
@@ -32,20 +30,22 @@ Program Main
     TYPE(TParticle):: TraPar
     TYPE(SolidObject):: BoomCase
     INTEGER(kind=it4b):: Irec,Jrec,NI,NJ,iprint
-    REAL(dp) :: zp,UParInlet,HParInlet,DParInlet,rop,gx,gy
-    REAL(KIND=dp):: vel,Uref,Vint
+    REAL(dp) :: zp,UParInlet,HParInlet,DParInlet,rop,gx,gy, Lref, Roref, Rey
+    REAL(KIND=dp):: vel,Uref,Vint, ha, hw, UwInlet, UgInlet, nuref
     REAL(dp) :: t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, LChannel, kw, omew, HDomain
     TYPE(TsimcoMesh) :: simcomesh
     INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght, NParInlet, IParInlet
     LOGICAL :: RunAgain, ICorProb
-    INTEGER(it8b) :: IttRun
+    INTEGER(it8b) :: IttRun 
+    CHARACTER*70 :: dir
     call getMeshSizes(ibeg, jbeg, ighte=ight, jghte=jght)
     open(unit=5,file='input.dat',action='read')
-    read(5,*),
-    read(5,*), Isize, Jsize, Irec, Jrec, Rey, Hw, iprint
-    read(5,*),
-    read(5,'(a70)'), dir
+    read(5,*)
+    read(5,*) Isize, Jsize, Irec, Jrec, Rey, Hw, iprint
+    read(5,*)
+    read(5,'(a70)') dir
     close(5)
+    call setDir(dir)
     Isize=500
     Jsize=160
     NI=Isize+1
@@ -126,12 +126,12 @@ Program Main
     call Initial_Clsvof(simcomesh%UGrid,simcomesh%UCell,BoomCase, wave)
     call Initial_Clsvof(simcomesh%VGrid,simcomesh%VCell,BoomCase, wave)
     call Grid_Preprocess(simcomesh,Var,int8(1))
-    call Var%Initialize(wave, simcomesh, simcomesh%PCell,simcomesh%PGrid,vel,Vint,0.d0,300.d0,Uref,300.d0,Roref,Lref)
+    call Var%Initialize(wave, simcomesh, simcomesh%PCell,simcomesh%PGrid,vel,Vint,0.d0,300.d0,Uref,300.d0,&
+         &              Roref,Lref, nuref, ha, UwInlet, UgInlet)
     call TraPar%InitializeParticles(simcomesh%PGrid,Var, UParInlet, HParInlet, DParInlet, zp, rop, gx, gy)
   !  call Print_Result_Tecplot_PCent(PGrid,Var,PCell,TraPar,INT8(0),1)
     call Print_Result_Tecplot_UCent(simcomesh%UGrid,Var,simcomesh%UCell,INT8(0))
     call Print_Result_Tecplot_VCent(simcomesh%VGrid,Var,simcomesh%VCell,INT8(0))
     call NewCellFace(simcomesh)
     call IterationSolution(simcomesh, Var,wave, TraPar,BoomCase,50)
-    pause
 end program main

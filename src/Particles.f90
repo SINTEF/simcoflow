@@ -51,7 +51,6 @@ Module Particles
     allocate(this%Posp(np_))
     allocate(this%uvp(np_))
     allocate(this%mp(np_))
-    allocate(this%dp(np_))
     allocate(this%tp(np_))
     allocate(this%t(np_))
     allocate(this%VrelG(np_))
@@ -84,11 +83,11 @@ Module Particles
     end do
     call Random_Number(ranum)
     do i=1,this%np
-      this%Posp(i)%x=(PGrid%x(10,1)+(PGrid%x(Isize,1)-PGrid%x(350,1))*ranum(i))*Lref
+      this%Posp(i)%x=(PGrid%x(10,1)+(PGrid%x(Isize,1)-PGrid%x(350,1))*ranum(i))*Pgrid%Lref
     end do
     call Random_Number(ranum)
     do i=1,this%np
-      this%Posp(i)%y=(PGrid%y(1,2)+(PGrid%y(1,Jsize)-PGrid%y(1,80))*ranum(i))*Lref
+      this%Posp(i)%y=(PGrid%y(1,2)+(PGrid%y(1,Jsize)-PGrid%y(1,80))*ranum(i))*Pgrid%Lref
     end do
  !  No contribution of particles
  !******************************
@@ -133,8 +132,8 @@ Module Particles
       do i=1,this%np
         call ParticlePosition(this%Posp(i),PGrid,ii,jj)
         if(ii/=-1.and.jj/=-1) then
-          if(this%PosP(i)%x/Lref<PGrid%x(Isize,1).and.                       &
-             this%PosP(i)%y/Lref<PGrid%y(1,Jsize).and.                       &
+          if(this%PosP(i)%x/Pgrid%Lref<PGrid%x(Isize,1).and.                       &
+             this%PosP(i)%y/Pgrid%Lref<PGrid%y(1,Jsize).and.                       &
              PCell%vofS(ii,jj)<1.d0-epsi) then
             ropp=row*PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)+            &
                  roa*(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
@@ -147,8 +146,8 @@ Module Particles
             dvdy=(Var%v(ii,jj)-Var%v(ii,jj-1))/PGrid%dy(ii,jj)
             ug0=0.5d0*(Var%u(ii,jj)+Var%u(ii-1,jj))
             vg0=0.5d0*(Var%v(ii,jj)+Var%v(ii,jj-1))
-            ug=(ug0+dudx*(this%Posp(i)%x/Lref-PGrid%x(ii,jj)))*Var%Uref
-            vg=(vg0+dvdy*(this%Posp(i)%y/Lref-PGrid%y(ii,jj)))*Var%Uref
+            ug=(ug0+dudx*(this%Posp(i)%x/Pgrid%Lref-PGrid%x(ii,jj)))*Var%Uref
+            vg=(vg0+dvdy*(this%Posp(i)%y/Pgrid%Lref-PGrid%y(ii,jj)))*Var%Uref
             VRel=dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
             if(VRel<1.d-7) VRel=1.d-7
             Reyp=this%dp(i)*VRel/nupp

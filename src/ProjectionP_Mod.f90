@@ -51,7 +51,7 @@ Module ProjectionP
       u => TPred%u
       v => TPred%v
       call ComputePossionMatrixCoefficient(PGrid,UGrid,VGrid,PCell,UCell,      &
-                                                             VCell,PU,PV)
+                                                             VCell,PU,PV, TVar%Roref)
       call SetBasicSolver(solver,precond)
 !     call SetBasicSolver(solver=solver,ierr=ierr)
 !     WB,EB,SB,NB
@@ -402,11 +402,12 @@ Module ProjectionP
     end subroutine DeltaPressureGetValues
 
     subroutine ComputePossionMatrixCoefficient(PGrid,UGrid,VGrid,PCell,UCell,  &
-                                                                 VCell,PU,PV)
+                                                                 VCell,PU,PV, Roref)
         IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
         TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
         TYPE(PoissonCoefficient),INTENT(IN):: PU,PV
+        REAl(dp), INTENT(in) ::Roref
         REAL(KIND=dp):: BetaP,BetaM,BetaW,BetaD,Lamda,tol
         INTEGER(kind=it4b):: i,j
         INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize

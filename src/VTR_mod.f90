@@ -76,9 +76,10 @@ module vtr
     print '(/,"   *** Info *** ",A,": ", A,/)',name, message
   end subroutine handle_info
 
-  subroutine VTR_open_file(prefix, proc_rank, num_procs, restart,itera,fd)
+  subroutine VTR_open_file(prefix, dir, proc_rank, num_procs, restart,itera,fd)
     IMPLICIT NONE
     character(len=*), INTENT(IN)         :: prefix
+    character(len=*), INTENT(in)         :: dir
     INTEGER, optional, INTENT(IN)        :: proc_rank, num_procs, restart
     INTEGER(kind=it8b),optional,INTENT(IN)          ::itera
     TYPE(VTR_file_handle), INTENT(INOUT) :: fd
