@@ -17,7 +17,6 @@ Program Main
     USE Cutcell, ONLY : Grid_Preprocess, NewCellFace
     USE Clsvof, ONLY : SolidObject, Initial_Clsvof
     USE StateVariables, ONLY : TVariables, TWave, setSolverVariables
-    !Global variables that needs to be fixed:
     USE Constants, ONLY : g, pi, nuw, row
     USE PrintResult, ONLY : Print_Result_Tecplot_PCent, Print_Result_Tecplot_UCent, Print_Result_Tecplot_VCent, setDir
     USE MPI, ONLY : MPI_Initial

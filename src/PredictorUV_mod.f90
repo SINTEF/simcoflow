@@ -1,13 +1,12 @@
 Module PredictorUV
     USE PrecisionVar
-    USE Mesh
-    USE Cutcell
-    USE Clsvof
+    USE Mesh, ONLY : Grid, Cell, getMeshSizes
+    USE Clsvof, ONLY : SolidObject
     USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : pi, epsi, nua, nuw, roa, row, BetaVis
-    USE Printresult
     USE MPI
-    USE Particles
+    USE Particles, ONLY : TParticle, Drag, ParticlePosition
+    use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
     IMPLICIT NONE
     PRIVATE
     real(dp),DIMENSION(:,:),pointer:: u,Uvolf
@@ -253,7 +252,8 @@ Module PredictorUV
               print*,i,j
               print*,Pred%u(i,j),UCell%vofS(i,j)
               print*,'flux'
-              pause 'PredictorUV_156'
+              print*, 'PredictorUV_156'
+              read(stdin,*)
             end if
           end if
         end do
@@ -417,7 +417,8 @@ Module PredictorUV
               print*,VCell%Posnu(i,j)
               print*,
               print*,FluxDiv(i,j,2)
-              pause 'PredictorUV_218'
+              print*, 'PredictorUV_218'
+              read(stdin,*)
             end if
           end if
         end do
@@ -492,7 +493,8 @@ Module PredictorUV
               print*,
               print*,TraPar%mp(i),TraPar%tp(i),TraPar%VRelG(i)
               print*,TVar%Roref*TVar%Uref/VGrid%Lref,TraPar%zp,Vro(ii,jj)
-              pause 'Momentum Particle 425'
+              print*, 'Momentum Particle 425'
+              read(stdin,*)
             end if
           end if
         end if
@@ -741,7 +743,8 @@ Module PredictorUV
                 print*,TCell%Cell_Cent(i,j,2),TCell%Cell_Cent(i,j+1,2),TCell%Cell_Cent(i,j-1,2)
                 print*,
                 print*,Sp
-                pause 'predictoruv_760'
+                print*, 'predictoruv_760'
+                read(stdin,*)
               end if
               matr(i,j,3)=values(nnz)
               nnz = nnz+1
@@ -831,7 +834,8 @@ Module PredictorUV
               if(isnan(rhs(ictr)).or.dabs(rhs(ictr))>1.d20) then
                 print*,i,j
                 print*,rhs(ictr)
-                pause 'Predictor 426'
+                print*, 'Predictor 426'
+                read(stdin,*)
               end if
               rhm(i,j)=rhs(ictr)
               xval(ictr) = 0.d0
@@ -886,7 +890,8 @@ Module PredictorUV
             end if
             if(isnan(Var(i,j))) then
               print*,i,j
-              pause 'PredictorUV_564'
+              print*, 'PredictorUV_564'
+              read(stdin,*)
             end if
           end do
         end do
@@ -2285,7 +2290,8 @@ Module PredictorUV
          print*,dy,dx
          write(*,*) 'vrt less than 0'
          print*,topvf,rightvf
-         pause 'PredictorUV_1068'
+         print*, 'PredictorUV_1068'
+         read(stdin,*)
        end if
        return
     END SUBROUTINE

@@ -1,7 +1,7 @@
 Module StateVariables
     USE PrecisionVar
     USE Constants, ONLY : g, epsi, roa, row
-    USE Mesh
+    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, getMeshSizes
     IMPLICIT NONE
     PRIVATE
 !   for run again from

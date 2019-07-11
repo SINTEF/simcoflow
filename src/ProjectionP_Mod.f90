@@ -4,12 +4,12 @@
 !* the value of internal cell afterwards.
 Module ProjectionP
     USE PrecisionVar
-    USE Mesh
-    USE Cutcell
-    USE StateVariables
+    USE Mesh, ONLY : Grid, Cell, getMeshSizes
+    USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : epsi, roa, row
-    USE PredictorUV
+    USE PredictorUV, ONLY : Predictor, PoissonCoefficient
     USE MPI
+    use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
     IMPLICIT NONE
     PRIVATE
     REAL(KIND=dp),DIMENSION(:,:),POINTER:: p,u,v
@@ -90,7 +90,8 @@ Module ProjectionP
             print*,'Problem start'
             print*,resi,rhm(i,j),dabs(resi-rhm(i,j))
             print*,i,j
-            pause 'ProjectionP_86'
+            print*, 'ProjectionP_86'
+            read(stdin,*)
           end if
         end do
       end do
@@ -214,7 +215,8 @@ Module ProjectionP
             if(isnan(Values(nnz)).or.dabs(Values(nnz))>1.d10) then
               print*,i,j,Values(nnz)
               print*,PoCoef(i,j,1),PoCoef(i,j,2),PoCoef(i,j,3),PoCoef(i,j,4)
-              pause 'ProjectP_195 Bugs, you are again!'
+              print*, 'ProjectP_195 Bugs, you are again!'
+              read(stdin,*)
             end if
           ! Apply boundary condition for matrix
             if(SB==1.and.j==jbeg) then
@@ -328,7 +330,8 @@ Module ProjectionP
               rhm(i,j)=rhs(ictr)
               if(isnan(rhs(ictr)).or.dabs(rhs(ictr))>1.d5) then
                 print*,u(i,j),u(i-1,j),v(i,j),v(i,j-1),i,j
-                pause 'bugs, projection 476'
+                print*, 'bugs, projection 476'
+                read(stdin,*)
               endif
 !              if(maxvect<dabs(rhs(ictr))) then
 !                maxvect=dabs(rhs(ictr))
@@ -391,7 +394,8 @@ Module ProjectionP
               ctr = ctr+1
               if(isnan(Projp%Pp(i,j)).or.projp%Pp(i,j)>1.d10) then
                 print*,Projp%Pp(i,j)
-                pause 'ProjectionP_Mod 356'
+                print*, 'ProjectionP_Mod 356'
+                read(stdin,*)
               end if
             else
               Projp%Pp(i,j) = 0.d0

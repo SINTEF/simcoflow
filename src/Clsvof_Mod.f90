@@ -1,10 +1,9 @@
 Module Clsvof
     USE PrecisionVar
-    USE Mesh
-    USE Cutcell
-!    USE StateVariables, ONLY : TVariables, TWave
-    USE StateVariables
+    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, getMeshSizes
+    USE StateVariables, ONLY : TVariables, TWave, getSolverVariables
     USE Constants, ONLY : epsi, epsiF
+    use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
     IMPLICIT NONE
     PRIVATE
     INTEGER,PARAMETER:: band_width = 4,nv = 10,nl = 5
@@ -1707,7 +1706,8 @@ Module Clsvof
             if(phiaux(i,j)>1.d3) then
               print*,i,j,phi(i,j),vfl(i,j),vfls(i,j)
               print*,phiaux(i,j)
-              pause 'fuck you bugs, Clsvof_Mod 1053'
+              print*, 'fuck you bugs, Clsvof_Mod 1053'
+              read(stdin,*)
             end if
             phi(i,j)=phiaux(i,j)
           else
@@ -1723,7 +1723,8 @@ Module Clsvof
             print*,i,j
             print*,vfl(i,j),fix(i,j)
             print*,phi(i,j),phiaux(i,j)
-            pause 'clsvof 1095'
+            print*, 'clsvof 1095'
+            read(stdin,*)
           end if
         end do
       end do
@@ -2060,7 +2061,8 @@ Module Clsvof
           print*,'problem 1266'
           print*,temp
           print*,nxss,nyss,phiss
-          pause 'fuck you bugs'
+          print*, 'fuck you bugs'
+          read(stdin,*)
         end if
         call zriddr(nxf,nyf,volf,dx,dy,phif,node,MinVer,MaxVer,1.d-14,1000)
     end subroutine DistanceFluidCalculate
@@ -2083,7 +2085,10 @@ Module Clsvof
        ! first of two function evaluation per iteration
            call LiqFuncVol(nxf,nyf,volf,dx,dy,node,xm,fm)
            s=dsqrt(fm*fm-fl*fh)
-           if(s==0.d0) pause 'fuck you zriddr method'
+           if(s==0.d0) then
+              print*, 'fuck you zriddr method'
+              read(stdin,*)
+           end if
            xnew(:)=xm(:)+(xm(:)-xl(:))*dsign(1.d0,fl-fh)*fm/s
            if(dsqrt((xnew(1)-ans(1))**2.d0+(xnew(2)-ans(2))**2.d0)<=tol) then
              phif=-(nxf*ans(1)+nyf*ans(2))
@@ -2107,7 +2112,8 @@ Module Clsvof
              xl=ans(:)
              fl=fnew
            else
-             pause 'fuck you ridder algorithm'
+             print*, 'fuck you ridder algorithm'
+             read(stdin,*)
            end if
            if(dsqrt((xh(1)-xl(1))**2.d0+(xh(2)-xl(2))**2.d0)<=tol) then
              phif=-(nxf*ans(1)+nyf*ans(2))
@@ -2142,14 +2148,16 @@ Module Clsvof
         do k = 1,temp-1
           if(k>6) then
             print*,temp
-            pause 'fuck you bugs Clsvof_Mod 1468'
+            print*, 'fuck you bugs Clsvof_Mod 1468'
+            read(stdin,*)
           end if
           pdt(k)=node(k,1)*nxf+node(k,2)*nyf+phil
         end do
         if(temp==0) then
           print*,node(1,1),node(1,2)
           print*,nxf,nyf,volf
-          pause 'fuck you bugs Clsvof_Mod 1475'
+          print*, 'fuck you bugs Clsvof_Mod 1475'
+          read(stdin,*)
         end if
         pdt(temp)=pdt(1)
 
@@ -2610,7 +2618,8 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause 'ClsVof_2668'
+            print*, 'ClsVof_2668'
+            read(stdin,*)
           end if
      !     For boom cylinder
      !     dx=TGrid%x(i,j)-BoomCase%Posp%x
@@ -2774,7 +2783,8 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause 'ClsVof_2804'
+            print*, 'ClsVof_2804'
+            read(stdin,*)
           end if
           call frac(nxx(i,j),nyy(i,j),TCell%phiS(i,j),TGrid%dx(i,j),           &
                                                       TGrid%dy(i,j),vol)
@@ -2952,7 +2962,8 @@ Module Clsvof
             print*,vofsOld(i,j),TCell%VofS(i,j)
             print*,TCell%PhiS(i,j)
             print*,nxx(i,j),nyy(i,j)
-            pause 'ClsVof_2875'
+            print*, 'ClsVof_2875'
+            read(stdin,*)
           end if
         end do
       end do

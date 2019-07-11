@@ -1,13 +1,10 @@
 Module PrintResult
     USE PrecisionVar
-    USE Mesh
+    USE Mesh, ONLY : Grid, Cell, getMeshSizes
     USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : pi, Ktw, roa, row
-    USE Clsvof
-    USE Cutcell
-    USE VTK
-    USE VTR
-    USE Particles
+    USE VTR, ONLY : VTR_file_handle, VTR_open_file, VTR_write_var, VTR_write_mesh, VTR_close_file
+    USE Particles, ONLY : TParticle
     IMPLICIT NONE
     PRIVATE
     CHARACTER*70,PRIVATE           ::dir

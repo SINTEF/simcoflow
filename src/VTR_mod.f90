@@ -9,7 +9,6 @@
 
 module vtr
   use PrecisionVar
-  use StateVariables
   IMPLICIT NONE
 
   PRIVATE

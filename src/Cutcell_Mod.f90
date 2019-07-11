@@ -1,7 +1,7 @@
 Module Cutcell
     USE PrecisionVar
-    USE Mesh
-    USE StateVariables
+    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, getMeshSizes
+    USE StateVariables, ONLY : TVariables, getSolverVariables
     USE Constants, ONLY : epsi, epsiF
     IMPLICIT NONE
     PRIVATE

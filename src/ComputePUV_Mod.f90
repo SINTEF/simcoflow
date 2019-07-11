@@ -1,13 +1,12 @@
 Module ComputePUV
     USE PrecisionVar
-    USE Mesh
-    USE Clsvof
-    USE Cutcell
-    USE StateVariables
+    USE Mesh, ONLY : Grid, Cell, getMeshSizes
+    USE Clsvof, ONLY : SolidObject
+    USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : epsi, roa, row
-    USE PredictorUV
-    USE ProjectionP
-    USE Particles
+    USE PredictorUV, ONLY : Predictor, PoissonCoefficient, Predictor_UV
+    USE ProjectionP, ONLY : Projection, PoissonEquationSolver
+    USE Particles, ONLY : TParticle
     IMPLICIT NONE
     PRIVATE
     PUBLIC:: UpdatePUV

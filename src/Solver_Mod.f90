@@ -1,14 +1,16 @@
 Module Solver
     USE PrecisionVar
     USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Grid, Cell
-    USE StateVariables
+    USE StateVariables, ONLY : TVariables, TWave, getSolverVariables, Boundary_Condition_Var
     USE Constants, ONLY : g, epsi
-    USE CutCell
-    USE Clsvof
-    USE PrintResult
-    USE ComputePUV
+    USE CutCell, ONLY : Grid_Preprocess, NewCellFace
+    USE Clsvof, ONLY : SolidObject, Coupled_LS_VOF, Initial_ClsVofUV, SolidVolumeFraction, ComputeForceObject
+    USE PrintResult, ONLY : getDir, ReadOldDataPCell, ReadOldDataVelocityCell, ReadOldDataParticle
+    USE PrintResult, ONLY : Print_Result_Tecplot_UCent, Print_Result_Tecplot_VCent, Print_Result_VTK_2D
+    USE PrintResult, ONLY : Print_Result_Tecplot_PCent
+    USE ComputePUV, ONLY : UpdatePUV
     USE MPI
-    USE Particles
+    USE Particles, ONLY : TParticle
     IMPLICIT NONE
     PRIVATE
     INTEGER(it8b) :: IttBegin
@@ -164,7 +166,7 @@ Module Solver
     !    call PrintWaterPressure(Time%NonDiT,J1,J2,J3,J4,TVar)
         call PrintHistory(itt,Time,PConv,BoomCase)
         if(mod(itt,iprint1)==0)then
-          write(*,*), itt,Time%PhysT,Time%NondiT
+          write(*,*) itt,Time%PhysT,Time%NondiT
           call Print_Result_Tecplot_PCent(simcomesh%PGrid,TVar,simcomesh%PCell,TraPar,Flux_n1,itt,1)
           call Print_Result_Tecplot_UCent(simcomesh%UGrid,TVar,simcomesh%UCell,itt)
           call Print_Result_Tecplot_VCent(simcomesh%VGrid,TVar,simcomesh%VCell,itt)
@@ -233,7 +235,7 @@ Module Solver
       end if
       call ComputeTimeStep(simcomesh%UGrid,simcomesh%VGrid,TVar,BoomCase,Time)
       open(unit=10,file=trim(adjustl(dir))//'ObjectForce.dat',access='append')
-      write(10,*),Time%NondiT,ForceObj-BoomCase%Mobj*g,BoomCase%asy,itt
+      write(10,*)Time%NondiT,ForceObj-BoomCase%Mobj*g,BoomCase%asy,itt
       close(10)
       dt=time%dt
       if(itt>1) then

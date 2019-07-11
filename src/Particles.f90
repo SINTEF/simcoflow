@@ -1,10 +1,11 @@
 Module Particles
   USE PrecisionVar
   USE MPI
-  USE Mesh
-  USE StateVariables
+  USE Mesh, ONLY : TPoint, Grid, Cell, getMeshSizes
+  USE StateVariables, ONLY : TVariables, TWave
   USE Constants, ONLY : pi, epsi, nua, nuw, roa, row
   USE Clsvof,ONLY: vofeps,SolidObject
+  use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
   PRIVATE
   INTEGER(kind=it4b),PARAMETER:: itp=10
   REAL(KIND=dp),PARAMETER:: tol=1.d-20,Ca=0.5d0
@@ -203,7 +204,8 @@ Module Particles
               print*,
               print*,this%Posp(i)%x,this%Posp(i)%y
               print*,PCell%vof(ii,jj)
-              pause 'Particle 127'
+              print*, 'Particle 127'
+              read(stdin,*)
             end if
             Upo(i)=Upn(i)
             Vpo(i)=Vpn(i)
@@ -229,7 +231,8 @@ Module Particles
       this%uvp(i)%u=Upo(i)
       this%uvp(i)%v=VPo(i)
       if(isnan(this%uvp(i)%u)) then
-        pause 'Particle 149'
+        print*, 'Particle 149'
+        read(stdin,*)
       end if
     end do
     deallocate(Upo,Upn)
