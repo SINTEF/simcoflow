@@ -75,6 +75,10 @@ Module Mesh
        Module procedure construct
     End interface
 
+    Interface Cell
+       Module procedure constructCell
+    End interface
+
     Interface TPoint
        Module procedure construct_point
     End interface
@@ -102,83 +106,48 @@ Module Mesh
         allocate(this%PGrid%dx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
         allocate(this%PGrid%dy(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
 
-        allocate(this%UCell%vof(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%phi(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%nx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%ny(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%vofS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%phiS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%nxS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%nyS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%EEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%UCell%WEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%UCell%NEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%UCell%SEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%UCell%MoExCell(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%UCell%EtaE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%EtaN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%DAlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%DAlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%AlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%AlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%SxE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%SyN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-        allocate(this%UCell%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-        allocate(this%UCell%WlLh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-        allocate(this%UCell%delh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-        allocate(this%UCell%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%UCell%Cell_Cent(Isize,Jsize,2))
-        allocate(this%UCell%MsCe(Isize,Jsize,2))
-
-        allocate(this%VCell%vof(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%phi(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%nx(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%ny(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%vofS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%phiS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%nxS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%nyS(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%EEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%VCell%WEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%VCell%NEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%VCell%SEdge_Area(ibeg-1:Isize+ibeg-1+1,jbeg-1:Jsize+jbeg-1+1))
-        allocate(this%VCell%MoExCell(ibeg:Isize+ibeg-1,jbeg:Jsize+jbeg-1))
-        allocate(this%VCell%EtaE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%EtaN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%DAlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%DAlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%AlE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%AlN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%SxE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%SyN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-        allocate(this%VCell%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-        allocate(this%VCell%WlLh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-        allocate(this%VCell%delh(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
-        allocate(this%VCell%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%VCell%Cell_Cent(Isize,Jsize,2))
-        allocate(this%VCell%MsCe(Isize,Jsize,2))
-
-        allocate(this%PCell%vof(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%phi(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%nx(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%ny(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%vofS(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%phiS(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%nxS(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%nyS(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%EEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-        allocate(this%PCell%WEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-        allocate(this%PCell%NEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-        allocate(this%PCell%SEdge_Area(ibeg-1:Isize+1,jbeg-1:Jsize+1))
-        allocate(this%PCell%FCE(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-        allocate(this%PCell%FCN(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
-        allocate(this%PCell%WlLh(ibeg:Isize,jbeg:Jsize))
-        allocate(this%PCell%PosNu(ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
-        allocate(this%PCell%Cell_Cent(Isize,Jsize,2))
+        this%UCell=Cell(ibeg-1,jbeg-1)
+        this%VCell=Cell(ibeg-1,jbeg-1)
+        this%PCell=Cell(0,0)
 
       end function construct
+
+      TYPE(Cell) function constructCell(o1, o2) RESULT( this )
+        INTEGER(it4b), INTENT(in) :: o1, o2
+        allocate(this%WlLh      (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%delh      (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%vof       (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%phi       (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%nx        (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%ny        (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%vofS      (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%phiS      (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%nxS       (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%nyS       (ibeg:Isize+o1,jbeg:Jsize+o2))
+        allocate(this%MoExCell  (ibeg:Isize+o1,jbeg:Jsize+o2))
+
+        allocate(this%EEdge_Area(o1:Isize+o1+1,o2:Jsize+o2+1))
+        allocate(this%WEdge_Area(o1:Isize+o1+1,o2:Jsize+o2+1))
+        allocate(this%NEdge_Area(o1:Isize+o1+1,o2:Jsize+o2+1))
+        allocate(this%SEdge_Area(o1:Isize+o1+1,o2:Jsize+o2+1))
+
+        allocate(this%EtaE      (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%EtaN      (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%DAlE      (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%DAlN      (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%AlE       (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%AlN       (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%SxE       (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%SyN       (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+        allocate(this%PosNu     (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght))
+
+        allocate(this%FCE       (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
+        allocate(this%FCN       (ibeg-ight:ibeg+Isize-1+ight,jbeg-jght:jbeg+Jsize-1+jght,2))
+        
+        allocate(this%Cell_Cent (Isize,Jsize,2))
+        allocate(this%MsCe      (Isize,Jsize,2))
+
+      end function constructCell
       Subroutine getMeshSizes(ibege, jbege, Isizee, Jsizee, ighte, jghte)
         INTEGER(it4b), OPTIONAL,INTENT(out) :: ibege, jbege, Isizee, Jsizee, ighte, jghte
         !

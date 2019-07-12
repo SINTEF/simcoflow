@@ -116,8 +116,8 @@ Program Main
 !    call InitialUVGrid(PGrid,UGrid,0,Lref)
 !    call InitialUVGrid(PGrid,VGrid,1,Lref)
     ! Using TsimcoMesh
-    call simcomesh%InitialUVGrid2(Lref, Lref)
     call simcomesh%Initial_Grid2(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,Lref,0)
+    call simcomesh%InitialUVGrid2(Lref, Lref)
     call simcomesh%HYPRE_CreateGrid2()
     !
 !    call HYPRE_CreateGrid(PGrid)
