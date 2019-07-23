@@ -6,6 +6,7 @@ Module Particles
   USE Constants, ONLY : pi, epsi, nua, nuw, roa, row
   USE Clsvof,ONLY: vofeps,SolidObject
   use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
+  IMPLICIT NONE
   PRIVATE
   INTEGER(kind=it4b),PARAMETER:: itp=10
   REAL(KIND=dp),PARAMETER:: tol=1.d-20,Ca=0.5d0
@@ -43,6 +44,7 @@ Module Particles
 
   TYPE(TParticle) function construct(np, NParInlet, IParInlet) RESULT ( this )
     !
+    INTEGER(it4b), intent(in) :: np, NParInlet, IParInlet
     INTEGER (it4b) :: np_
     this % np = np
     this % NParInlet = NParInlet
@@ -266,6 +268,8 @@ Module Particles
     TYPE(Grid),INTENT(IN)::TGrid
     INTEGER(kind=it4b),INTENT(OUT):: ii,jj
     INTEGER(kind=it4b):: i,j
+    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
+    call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
     ii=-1
     do i=1,Isize
       if(Posi%x/TGrid%Lref>=TGrid%x(i,1)-TGrid%dx(i,1)/2.d0.and.               &

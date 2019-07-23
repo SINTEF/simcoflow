@@ -407,8 +407,8 @@ Module Cutcell
       Subroutine NewCellFace(simcomesh)
         IMPLICIT NONE
         TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
-        TYPE(Cell) :: PCell,UCell,VCell
-        TYPE(Grid) :: PGrid,UGrid,VGrid
+!        TYPE(Cell) :: PCell,UCell,VCell
+!        TYPE(Grid) :: PGrid,UGrid,VGrid
         INTEGER(kind=it4b):: i,j,k,ii,jj,temp, ibeg, jbeg, Isize, Jsize
         REAL(KIND=dp):: MaxFace
         INTEGER(kind=it4b),PARAMETER:: nx=5,ny=5
@@ -419,152 +419,152 @@ Module Cutcell
         tol = 1.d-24
         tol1 = 1.d-14
         ! This is a shortcut
-        PCell = simcomesh % PCell
-        UCell = simcomesh % UCell
-        VCell = simcomesh % VCell
-        Pgrid = simcomesh % Pgrid
-        Ugrid = simcomesh % Ugrid
-        Vgrid = simcomesh % Vgrid
+!        PCell = simcomesh % PCell
+!        UCell = simcomesh % UCell
+!        VCell = simcomesh % VCell
+!        Pgrid = simcomesh % Pgrid
+!        Ugrid = simcomesh % Ugrid
+!        Vgrid = simcomesh % Vgrid
         call getMeshSizes(ibeg, jbeg, Isize, Jsize)
 
         !
-     !   dxx = PGrid%delx/dble(nx)
-     !   dyy = PGrid%dely/dble(ny)
+     !   dxx = simcomesh%Pgrid%delx/dble(nx)
+     !   dyy = simcomesh%Pgrid%dely/dble(ny)
         temp = 0
         do i = ibeg,ibeg+Isize-1
           do j = jbeg,jbeg+Jsize-1
-            if(UCell%MoExCell(i,j)/=1.and.UCell%VofS(i,j)>epsi) then
-              UCell%Cell_Cent(i,j,1)=PCell%FCE(i,j,1)-PGrid%dx(i,j)/2.d0
-              UCell%Cell_Cent(i,j,2)=PCell%FCE(i,j,2)
+            if(simcomesh%Ucell%MoExCell(i,j)/=1.and.simcomesh%Ucell%VofS(i,j)>epsi) then
+              simcomesh%Ucell%Cell_Cent(i,j,1)=simcomesh%Pcell%FCE(i,j,1)-simcomesh%Pgrid%dx(i,j)/2.d0
+              simcomesh%Ucell%Cell_Cent(i,j,2)=simcomesh%Pcell%FCE(i,j,2)
             end if
 
-            if(VCell%MoExCell(i,j)/=1.and.VCell%VofS(i,j)>epsi) then
-              VCell%Cell_Cent(i,j,1)=PCell%FCN(i,j,1)
-              VCell%Cell_Cent(i,j,2)=PCell%FCN(i,j,2)-PGrid%dy(i,j)/2.d0
+            if(simcomesh%Vcell%MoExCell(i,j)/=1.and.simcomesh%Vcell%VofS(i,j)>epsi) then
+              simcomesh%Vcell%Cell_Cent(i,j,1)=simcomesh%Pcell%FCN(i,j,1)
+              simcomesh%Vcell%Cell_Cent(i,j,2)=simcomesh%Pcell%FCN(i,j,2)-simcomesh%Pgrid%dy(i,j)/2.d0
             end if
           end do
         end do
         do i=1,Isize
           do j=1,Jsize
-            if(UCell%MoExCell(i,j)==1) then ! for very small UCell which connects to only one PCell
-              if(UCell%vofS(i,j)<1.d0-epsi) then
-                if(UCell%NEdge_Area(i,j)*UCell%NEdge_Area(i,j-1)==0.d0) then
-                  UCell%Cell_Cent(i,j,1)=UCell%FCN(i,j,1)*UCell%NEdge_Area(i,j)&
-                                         /(UCell%NEdge_Area(i,j)+tol)+      &
-                                     UCell%FCN(i,j-1,1)*UCell%NEdge_Area(i,j-1)&
-                                         /(UCell%NEdge_Area(i,j-1)+tol)
+            if(simcomesh%Ucell%MoExCell(i,j)==1) then ! for very small simcomesh%Ucell which connects to only one simcomesh%Pcell
+              if(simcomesh%Ucell%vofS(i,j)<1.d0-epsi) then
+                if(simcomesh%Ucell%NEdge_Area(i,j)*simcomesh%Ucell%NEdge_Area(i,j-1)==0.d0) then
+                  simcomesh%Ucell%Cell_Cent(i,j,1)=simcomesh%Ucell%FCN(i,j,1)*simcomesh%Ucell%NEdge_Area(i,j)&
+                                         /(simcomesh%Ucell%NEdge_Area(i,j)+tol)+      &
+                                     simcomesh%Ucell%FCN(i,j-1,1)*simcomesh%Ucell%NEdge_Area(i,j-1)&
+                                         /(simcomesh%Ucell%NEdge_Area(i,j-1)+tol)
                 else
-                  UCell%Cell_Cent(i,j,2)=UCell%FCE(i,j,2)*UCell%EEdge_Area(i,j)&
-                                         /(UCell%EEdge_Area(i,j)+tol)+      &
-                                     UCell%FCE(i-1,j,2)*UCell%EEdge_Area(i-1,j)&
-                                         /(UCell%EEdge_Area(i-1,j)+tol)
-                  UCell%Cell_Cent(i,j,1)=-(UCell%nyS(i,j)*UCell%Cell_Cent(i,j,2)&
-                                           +UCell%phiS(i,j))/(UCell%nxS(i,j)+tol)
+                  simcomesh%Ucell%Cell_Cent(i,j,2)=simcomesh%Ucell%FCE(i,j,2)*simcomesh%Ucell%EEdge_Area(i,j)&
+                                         /(simcomesh%Ucell%EEdge_Area(i,j)+tol)+      &
+                                     simcomesh%Ucell%FCE(i-1,j,2)*simcomesh%Ucell%EEdge_Area(i-1,j)&
+                                         /(simcomesh%Ucell%EEdge_Area(i-1,j)+tol)
+                  simcomesh%Ucell%Cell_Cent(i,j,1)=-(simcomesh%Ucell%nyS(i,j)*simcomesh%Ucell%Cell_Cent(i,j,2)&
+                                           +simcomesh%Ucell%phiS(i,j))/(simcomesh%Ucell%nxS(i,j)+tol)
                 end if
-                if(UCell%EEdge_Area(i,j)*UCell%EEdge_Area(i-1,j)==0.d0) then
-                  UCell%Cell_Cent(i,j,2)=UCell%FCE(i,j,2)*UCell%EEdge_Area(i,j)&
-                                         /(UCell%EEdge_Area(i,j)+tol)+      &
-                                     UCell%FCE(i-1,j,2)*UCell%EEdge_Area(i-1,j)&
-                                         /(UCell%EEdge_Area(i-1,j)+tol)
+                if(simcomesh%Ucell%EEdge_Area(i,j)*simcomesh%Ucell%EEdge_Area(i-1,j)==0.d0) then
+                  simcomesh%Ucell%Cell_Cent(i,j,2)=simcomesh%Ucell%FCE(i,j,2)*simcomesh%Ucell%EEdge_Area(i,j)&
+                                         /(simcomesh%Ucell%EEdge_Area(i,j)+tol)+      &
+                                     simcomesh%Ucell%FCE(i-1,j,2)*simcomesh%Ucell%EEdge_Area(i-1,j)&
+                                         /(simcomesh%Ucell%EEdge_Area(i-1,j)+tol)
                 else
-                  UCell%Cell_Cent(i,j,2)=-(UCell%nxS(i,j)*UCell%Cell_Cent(i,j,1)&
-                                           +UCell%phiS(i,j))/(UCell%nyS(i,j)+tol)
+                  simcomesh%Ucell%Cell_Cent(i,j,2)=-(simcomesh%Ucell%nxS(i,j)*simcomesh%Ucell%Cell_Cent(i,j,1)&
+                                           +simcomesh%Ucell%phiS(i,j))/(simcomesh%Ucell%nyS(i,j)+tol)
                 end if
               else
-             !   UCell%Cell_Cent(i,j,1) = 0.d0
-             !   UCell%Cell_Cent(i,j,2) = 0.d0
+             !   simcomesh%Ucell%Cell_Cent(i,j,1) = 0.d0
+             !   simcomesh%Ucell%Cell_Cent(i,j,2) = 0.d0
               end if
-              call CellLinking(UGrid,UCell,i,j)
+              call CellLinking(simcomesh%Ugrid,simcomesh%Ucell,i,j)
             end if
 
-            if(VCell%MoExCell(i,j)==1) then ! for very small VCell which connects to only one PCell
-              if(VCell%vofS(i,j)<1.d0-epsi) then
-                if(VCell%NEdge_Area(i,j)*VCell%NEdge_Area(i,j-1)==0.d0) then
-                  VCell%Cell_Cent(i,j,1)=VCell%FCN(i,j,1)*VCell%NEdge_Area(i,j)&
-                                         /(VCell%NEdge_Area(i,j)+tol)+         &
-                                     VCell%FCN(i,j-1,1)*VCell%NEdge_Area(i,j-1)&
-                                         /(VCell%NEdge_Area(i,j-1)+tol)
+            if(simcomesh%Vcell%MoExCell(i,j)==1) then ! for very small simcomesh%Vcell which connects to only one simcomesh%Pcell
+              if(simcomesh%Vcell%vofS(i,j)<1.d0-epsi) then
+                if(simcomesh%Vcell%NEdge_Area(i,j)*simcomesh%Vcell%NEdge_Area(i,j-1)==0.d0) then
+                  simcomesh%Vcell%Cell_Cent(i,j,1)=simcomesh%Vcell%FCN(i,j,1)*simcomesh%Vcell%NEdge_Area(i,j)&
+                                         /(simcomesh%Vcell%NEdge_Area(i,j)+tol)+         &
+                                     simcomesh%Vcell%FCN(i,j-1,1)*simcomesh%Vcell%NEdge_Area(i,j-1)&
+                                         /(simcomesh%Vcell%NEdge_Area(i,j-1)+tol)
                 else
-                  VCell%Cell_Cent(i,j,2)=VCell%FCE(i,j,2)*VCell%EEdge_Area(i,j)&
-                                         /(VCell%EEdge_Area(i,j)+tol)+         &
-                                     VCell%FCE(i-1,j,2)*VCell%EEdge_Area(i-1,j)&
-                                         /(VCell%EEdge_Area(i-1,j)+tol)
-                  VCell%Cell_Cent(i,j,1)=-(VCell%Cell_Cent(i,j,2)*VCell%nyS(i,j)&
-                                           +VCell%phiS(i,j))/(VCell%nxS(i,j)+tol)
+                  simcomesh%Vcell%Cell_Cent(i,j,2)=simcomesh%Vcell%FCE(i,j,2)*simcomesh%Vcell%EEdge_Area(i,j)&
+                                         /(simcomesh%Vcell%EEdge_Area(i,j)+tol)+         &
+                                     simcomesh%Vcell%FCE(i-1,j,2)*simcomesh%Vcell%EEdge_Area(i-1,j)&
+                                         /(simcomesh%Vcell%EEdge_Area(i-1,j)+tol)
+                  simcomesh%Vcell%Cell_Cent(i,j,1)=-(simcomesh%Vcell%Cell_Cent(i,j,2)*simcomesh%Vcell%nyS(i,j)&
+                                           +simcomesh%Vcell%phiS(i,j))/(simcomesh%Vcell%nxS(i,j)+tol)
 
                 end if
-                if(VCell%EEdge_Area(i,j)*VCell%EEdge_Area(i-1,j)==0.d0) then
-                  VCell%Cell_Cent(i,j,2)=VCell%FCE(i,j,2)*VCell%EEdge_Area(i,j)&
-                                         /(VCell%EEdge_Area(i,j)+tol)+         &
-                                     VCell%FCE(i-1,j,2)*VCell%EEdge_Area(i-1,j)&
-                                         /(VCell%EEdge_Area(i-1,j)+tol)
+                if(simcomesh%Vcell%EEdge_Area(i,j)*simcomesh%Vcell%EEdge_Area(i-1,j)==0.d0) then
+                  simcomesh%Vcell%Cell_Cent(i,j,2)=simcomesh%Vcell%FCE(i,j,2)*simcomesh%Vcell%EEdge_Area(i,j)&
+                                         /(simcomesh%Vcell%EEdge_Area(i,j)+tol)+         &
+                                     simcomesh%Vcell%FCE(i-1,j,2)*simcomesh%Vcell%EEdge_Area(i-1,j)&
+                                         /(simcomesh%Vcell%EEdge_Area(i-1,j)+tol)
                 else
-                  VCell%Cell_Cent(i,j,2)=-(VCell%Cell_Cent(i,j,1)*VCell%nxS(i,j)&
-                                           +VCell%phiS(i,j))/(VCell%nyS(i,j)+tol)
+                  simcomesh%Vcell%Cell_Cent(i,j,2)=-(simcomesh%Vcell%Cell_Cent(i,j,1)*simcomesh%Vcell%nxS(i,j)&
+                                           +simcomesh%Vcell%phiS(i,j))/(simcomesh%Vcell%nyS(i,j)+tol)
                 end if
               else
-            !    VCell%Cell_Cent(i,j,1) = 0.d0
-            !    VCell%Cell_Cent(i,j,2) = 0.d0
+            !    simcomesh%Vcell%Cell_Cent(i,j,1) = 0.d0
+            !    simcomesh%Vcell%Cell_Cent(i,j,2) = 0.d0
               end if
-              call CellLinking(VGrid,VCell,i,j)
+              call CellLinking(simcomesh%Vgrid,simcomesh%Vcell,i,j)
             end if
           end do
         end do
         do i = 1,Isize
           do j = 1,Jsize
-          ! For UCell
+          ! For simcomesh%Ucell
         !    if(i<Isize) then
-        !      delh1=(UCell%Cell_Cent(i,j,1)+PGrid%dx(i,j)/2.d0)*PCell%nxS(i,j)+&
-        !             UCell%Cell_Cent(i,j,2)*PCell%nyS(i,j)+PCell%phiS(i,j)
-        !     delh2=(UCell%Cell_Cent(i,j,1)-PGrid%dx(i+1,j)/2.d0)*             &
-        !             PCell%nxS(i+1,j)+UCell%Cell_Cent(i,j,2)*PCell%nyS(i+1,j)+ &
-        !                                                      PCell%phiS(i+1,j)
-        !      UCell%delh(i,j)=0.5d0*dabs(delh1+delh2)+tol1
-        !      if(PCell%vofS(i,j)>1.d0-epsi.or.PCell%vofS(i,j)<epsi) then
-        !        UCell%delh(i,j)=dabs(delh2)+tol1
+        !      delh1=(simcomesh%Ucell%Cell_Cent(i,j,1)+simcomesh%Pgrid%dx(i,j)/2.d0)*simcomesh%Pcell%nxS(i,j)+&
+        !             simcomesh%Ucell%Cell_Cent(i,j,2)*simcomesh%Pcell%nyS(i,j)+simcomesh%Pcell%phiS(i,j)
+        !     delh2=(simcomesh%Ucell%Cell_Cent(i,j,1)-simcomesh%Pgrid%dx(i+1,j)/2.d0)*             &
+        !             simcomesh%Pcell%nxS(i+1,j)+simcomesh%Ucell%Cell_Cent(i,j,2)*simcomesh%Pcell%nyS(i+1,j)+ &
+        !                                                      simcomesh%Pcell%phiS(i+1,j)
+        !      simcomesh%Ucell%delh(i,j)=0.5d0*dabs(delh1+delh2)+tol1
+        !      if(simcomesh%Pcell%vofS(i,j)>1.d0-epsi.or.simcomesh%Pcell%vofS(i,j)<epsi) then
+        !        simcomesh%Ucell%delh(i,j)=dabs(delh2)+tol1
         !      end if
-        !      if(PCell%vofS(i+1,j)>1.d0-epsi.or.PCell%vofS(i+1,j)<epsi) then
-        !        UCell%delh(i,j)=dabs(delh1)+tol1
+        !      if(simcomesh%Pcell%vofS(i+1,j)>1.d0-epsi.or.simcomesh%Pcell%vofS(i+1,j)<epsi) then
+        !        simcomesh%Ucell%delh(i,j)=dabs(delh1)+tol1
         !      end if
         !    else
-              UCell%delh(i,j)=dabs(UCell%Cell_Cent(i,j,1)*UCell%nxS(i,j)+      &
-                    UCell%Cell_Cent(i,j,2)*UCell%nyS(i,j)+UCell%phiS(i,j))+tol
-              if(UCell%MoExCell(i,j)==1) UCell%delh(i,j)=1.d-20
+              simcomesh%Ucell%delh(i,j)=dabs(simcomesh%Ucell%Cell_Cent(i,j,1)*simcomesh%Ucell%nxS(i,j)+      &
+                    simcomesh%Ucell%Cell_Cent(i,j,2)*simcomesh%Ucell%nyS(i,j)+simcomesh%Ucell%phiS(i,j))+tol
+              if(simcomesh%Ucell%MoExCell(i,j)==1) simcomesh%Ucell%delh(i,j)=1.d-20
         !    end if
-          ! For VCell
+          ! For simcomesh%Vcell
         !    if(j<Jsize) then
-        !      delh1=VCell%Cell_Cent(i,j,1)*PCell%nxS(i,j)+                     &
-        !           (VCell%Cell_Cent(i,j,2)+PGrid%dy(i,j)/2.d0)*                &
-        !                                   PCell%nyS(i,j)+PCell%phiS(i,j)
-        !      delh2=VCell%Cell_Cent(i,j,1)*PCell%nxS(i,j+1)+                   &
-        !           (VCell%Cell_Cent(i,j,2)-PGrid%dy(i,j+1)/2.d0)*              &
-        !                                   PCell%nyS(i,j+1)+PCell%phiS(i,j+1)
-        !      VCell%delh(i,j)=0.5d0*dabs(delh1+delh2)+tol1
-        !      if(PCell%vofS(i,j)>1.d0-epsi.or.PCell%vofS(i,j)<epsi) then
-       !         VCell%delh(i,j)=dabs(delh2)+tol1
+        !      delh1=simcomesh%Vcell%Cell_Cent(i,j,1)*simcomesh%Pcell%nxS(i,j)+                     &
+        !           (simcomesh%Vcell%Cell_Cent(i,j,2)+simcomesh%Pgrid%dy(i,j)/2.d0)*                &
+        !                                   simcomesh%Pcell%nyS(i,j)+simcomesh%Pcell%phiS(i,j)
+        !      delh2=simcomesh%Vcell%Cell_Cent(i,j,1)*simcomesh%Pcell%nxS(i,j+1)+                   &
+        !           (simcomesh%Vcell%Cell_Cent(i,j,2)-simcomesh%Pgrid%dy(i,j+1)/2.d0)*              &
+        !                                   simcomesh%Pcell%nyS(i,j+1)+simcomesh%Pcell%phiS(i,j+1)
+        !      simcomesh%Vcell%delh(i,j)=0.5d0*dabs(delh1+delh2)+tol1
+        !      if(simcomesh%Pcell%vofS(i,j)>1.d0-epsi.or.simcomesh%Pcell%vofS(i,j)<epsi) then
+       !         simcomesh%Vcell%delh(i,j)=dabs(delh2)+tol1
        !       end if
-       !       if(PCell%vofS(i,j+1)>1.d0-epsi.or.PCell%vofS(i,j+1)<epsi) then
-       !         VCell%delh(i,j)=dabs(delh1)+tol1
+       !       if(simcomesh%Pcell%vofS(i,j+1)>1.d0-epsi.or.simcomesh%Pcell%vofS(i,j+1)<epsi) then
+       !         simcomesh%Vcell%delh(i,j)=dabs(delh1)+tol1
        !       end if
        !     else
-              VCell%delh(i,j)=dabs(VCell%Cell_Cent(i,j,1)*VCell%nxS(i,j)+      &
-                    VCell%Cell_Cent(i,j,2)*VCell%nyS(i,j)+VCell%phiS(i,j))+tol
-              if(VCell%MoExCell(i,j)==1) VCell%delh(i,j)=1.d-20
+              simcomesh%Vcell%delh(i,j)=dabs(simcomesh%Vcell%Cell_Cent(i,j,1)*simcomesh%Vcell%nxS(i,j)+      &
+                    simcomesh%Vcell%Cell_Cent(i,j,2)*simcomesh%Vcell%nyS(i,j)+simcomesh%Vcell%phiS(i,j))+tol
+              if(simcomesh%Vcell%MoExCell(i,j)==1) simcomesh%Vcell%delh(i,j)=1.d-20
         !    end if
-            UCell%WlLh(i,j)=dsqrt(((UCell%EEdge_Area(i,j)-UCell%WEdge_Area(i,j))&
-                                 *UGrid%dx(i,j))**2.d0+((UCell%NEdge_Area(i,j)-&
-                                  UCell%SEdge_Area(i,j))*UGrid%dy(i,j))**2.d0)
-            VCell%WlLh(i,j)=dsqrt(((VCell%EEdge_Area(i,j)-VCell%WEdge_Area(i,j))&
-                                 *VGrid%dx(i,j))**2.d0+((VCell%NEdge_Area(i,j)-&
-                                  VCell%SEdge_Area(i,j))*VGrid%dy(i,j))**2.d0)
+            simcomesh%Ucell%WlLh(i,j)=dsqrt(((simcomesh%Ucell%EEdge_Area(i,j)-simcomesh%Ucell%WEdge_Area(i,j))&
+                                 *simcomesh%Ugrid%dx(i,j))**2.d0+((simcomesh%Ucell%NEdge_Area(i,j)-&
+                                  simcomesh%Ucell%SEdge_Area(i,j))*simcomesh%Ugrid%dy(i,j))**2.d0)
+            simcomesh%Vcell%WlLh(i,j)=dsqrt(((simcomesh%Vcell%EEdge_Area(i,j)-simcomesh%Vcell%WEdge_Area(i,j))&
+                                 *simcomesh%Vgrid%dx(i,j))**2.d0+((simcomesh%Vcell%NEdge_Area(i,j)-&
+                                  simcomesh%Vcell%SEdge_Area(i,j))*simcomesh%Vgrid%dy(i,j))**2.d0)
           end do
         end do
       ! Define other Coefficients which are used for convective flux and diffusive calculation
-      ! For UCell
-        call EastFaceInterpolationInf(UCell,UGrid,PGrid,1, Isize, Jsize)
-        call NorthFaceInterpolationInf(UCell,UGrid,VGrid,0, Isize, Jsize)
-        call EastFaceInterpolationInf(VCell,VGrid,UGrid,0, Isize, Jsize)
-        call NorthFaceInterpolationInf(VCell,VGrid,PGrid,1, Isize, Jsize)
+      ! For simcomesh%Ucell
+        call EastFaceInterpolationInf(simcomesh%Ucell,simcomesh%Ugrid,simcomesh%Pgrid,1, Isize, Jsize)
+        call NorthFaceInterpolationInf(simcomesh%Ucell,simcomesh%Ugrid,simcomesh%Vgrid,0, Isize, Jsize)
+        call EastFaceInterpolationInf(simcomesh%Vcell,simcomesh%Vgrid,simcomesh%Ugrid,0, Isize, Jsize)
+        call NorthFaceInterpolationInf(simcomesh%Vcell,simcomesh%Vgrid,simcomesh%Pgrid,1, Isize, Jsize)
       end subroutine NewCellFace
 
       SUBROUTINE EastFaceInterpolationInf(TCell,TGrid,BGrid,iu, Isize, Jsize)

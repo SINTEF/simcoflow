@@ -75,6 +75,9 @@ Module StateVariables
       this%Roref = Roref
       this%Pref = Roref*Uref**2.d0
       this%Tref = Tref
+      this%nuref = nuref
+      this%UwInlet = UwInlet
+      this%UgInlet = UgInlet
       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,Isize+ibeg-1
         do j = jbeg,Jsize+jbeg-1
