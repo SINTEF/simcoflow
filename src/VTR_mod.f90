@@ -1,13 +1,11 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -*- Mode: F90 -*- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+module vtr
 !! VTR_mod.f90 --- XML VTR ASCII data file
 !!
 !! Auteur          : Jalel Chergui (LIMSI-CNRS) <Jalel.Chergui@limsi.fr>
-!! Créé le         : Wed Jul 26 14:36:52 2006
 !! Dern. mod. par  : Jalel Chergui (LIMSI-CNRS) <Jalel.Chergui@limsi.fr>
 !! Dern. mod. le   : Wed Sep 16 14:36:29 2009
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-module vtr
+  
   use PrecisionVar
   use StateVariables
   IMPLICIT NONE

@@ -257,19 +257,11 @@ Module Solver
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
       INTEGER(kind=it8b),INTENT(IN):: itt
       INTEGER(kind=it4b):: i,j
-      REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: SPar
-      REAL(KIND=dp),DIMENSION(:,:),allocatable:: SParU,SParV,VolPar,VolParU,VolParV
       REAL(KIND=dp):: dt,Se,ForceObj
       if(itt==1) then
         BoomCase%us=0.d0
         BoomCase%vs=0.d0
       end if
-      allocate(SPar(Isize,Jsize,2))
-      allocate(SParU(Isize,Jsize))
-      allocate(SParV(Isize,Jsize))
-      allocate(VolPar(Isize,Jsize))
-      allocate(VolParU(Isize,Jsize))
-      allocate(VolParV(Isize,Jsize))
       ! First Runge-Kutta substep
       call CopyNewCell(PCellO,PCell)
       call CopyNewCell(UCellO,UCell)
@@ -296,10 +288,8 @@ Module Solver
       if(itt>1) then
         call Coupled_LS_VOF(PGrid,PCell,UCell,VCell,TVar,BoomCase,             &
                                                              Time%NondiT,dt,itt)
-        call Initial_ClsVofUV(PCell,PGrid,UCell,UGrid,VolPar,SPar,VolParU,     &
-                                                             SParU,BoomCase,0)
-        call Initial_ClsVofUV(PCell,PGrid,VCell,VGrid,VolPar,SPar,VolParV,     &
-                                                             SParV,BoomCase,1)
+        call Initial_ClsVofUV(PCell,PGrid,UCell,UGrid,BoomCase,0)
+        call Initial_ClsVofUV(PCell,PGrid,VCell,VGrid,BoomCase,1)
         call Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,itt)
         call NewCellFace(PCell,UCell,VCell,PGrid,UGrid,VGrid)
         call Boundary_Condition_Var(PGrid,PCell,TVar,Time%NondiT)
@@ -310,12 +300,8 @@ Module Solver
         VolParU(:,:)=0.d0;VolParV(:,:)=0.d0
       end if
       call UpdatePUV(UGrid,VGrid,PGrid,PCellO,UCellO,VCellO,PCell,UCell,       &
-           VCell,TVar,Flux_n1,TraPar,VolParU,VolParV,SParU,SParV,BoomCase,dt,itt)
+           VCell,TVar,Flux_n1,TraPar,BoomCase,dt,itt)
       ! Calculate the three kind of norm for convergence
-      deallocate(SPar)
-      deallocate(SParU,SParV)
-      deallocate(VolPar)
-      deallocate(VolParU,VolParV)
     END SUBROUTINE AdamBasforthCrankNicolson
 
     SUBROUTINE ComputeTimeStep(UGrid,VGrid,TVar,BoomCase,Time)

@@ -1,4 +1,15 @@
 Module ComputePUV
+ !! Description:
+ !! The module calculates the pressure and velocities (correction step). lied.
+ ! Current Code Owner: SIMCOFlow
+ ! Code Description:
+ ! Language: Fortran 90.
+ ! Software Standards: "European Standards for Writing and
+ ! Documenting Exchangeable Fortran 90 Code".
+ !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ! Author : Son Tung Dang
+ !        : NTNU,SINTEF
+ ! Date : 20.09.2019  
     USE PrecisionVar
     USE Mesh
     USE Clsvof
@@ -15,16 +26,26 @@ Module ComputePUV
     End interface
     Contains
     Subroutine UpdatePUV(UGrid,VGrid,PGrid,PCellO,UCellO,VCellO,PCell,UCell,    &
-           VCell,TVar,Flux_n1,TraPar,VolParU,VolParV,SParU,SParV,BoomCase,dt,itt)
+           VCell,TVar,Flux_n1,TraPar,BoomCase,dt,itt)
+      !! The subroutine computes the flow field parameters in the next time step.
+      !!   
       IMPLICIT NONE
-      TYPE(Grid),INTENT(IN):: UGrid,VGrid,PGrid
-      TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell,PCellO,UCellO,VCellO
+      TYPE(Grid),INTENT(IN)   :: UGrid,VGrid,PGrid
+        !! The input grid
+      TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell
+        !! The input and output cell
+      TYPE(Cell),INTENT(INOUT):: PCellO,UCellO,VCellO
+        !! The input and output cell a previous time step
       TYPE(Variables),INTENT(INOUT):: TVar
+        !! The state variables
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
+        !! The total flux at the previous time step
       TYPE(Particle),INTENT(INOUT):: TraPar
+        !! The particle information
       TYPE(SolidObject),INTENT(IN):: BoomCase
+        !! The boom
       REAL(KIND=dp),INTENT(IN):: dt
-      REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: VolParU,VolParV,SParU,SParV
+        !! The time step 
       INTEGER(kind=it8b),INTENT(IN):: itt
       TYPE(PoissonCoefficient):: PU,PV
       TYPE(Predictor):: Pred
@@ -44,24 +65,22 @@ Module ComputePUV
       Pred%u(:,:) = TVar%u(:,:)
       Pred%v(:,:) = TVar%v(:,:)
       tol=1.d-24
-    !  If(itt==1) then
-    !  TVar%p(:,:) = 0.d0
-    !  End if
-      Proj%Pp(:,:) = 0.d0 !TVar%p(:,:)
+
+      Proj%Pp(:,:) = 0.d0 
       dps=0.d0
       call Predictor_UV(PGrid,UGrid,VGrid,PCellO,UCellO,VCellO,PCell,UCell,    &
                               VCell,TVar,PU,PV,Pred,Flux_n1,TraPar,VolParU,    &
-                              VolParV,SParU,SParV,BoomCase,dt,itt)
-   !   If(itt/=1914) then
+                              BoomCase,dt,itt)
+
       call PoissonEquationSolver(PGrid,UGrid,VGrid,PCellO,PCell,UCell,VCell,   &
                                  TVar,Pred,PU,PV,Proj,BoomCase%vs,dt,itt)
-   !   End if
+      ! Correct u
       do i=1,Isize-1
         do j=1,Jsize
           GRadPUV(i,j)=0.d0
           if(UCell%Posnu(i,j)/=-1.and.UCell%MoExCell(i,j)/=1) then
             if((PCell%vof(i,j)>=0.5d0.and.PCell%vofS(i,j)<epsi).or.            &
-                (PCell%phi(i,j)<0.d0.and.PCell%vofS(i,j)>=epsi))then ! this cell is wet
+                (PCell%phi(i,j)<0.d0.and.PCell%vofS(i,j)>=epsi))then 
               if((PCell%vof(i+1,j)<0.5d0.and.PCell%vofS(i+1,j)<epsi).or.       &
                  (PCell%phi(i+1,j)>=0.d0.and.PCell%vofS(i+1,j)>=epsi))then
                 Lamda=dabs(PCell%phi(i,j))/(dabs(PCell%phi(i,j))+              &
@@ -98,16 +117,18 @@ Module ComputePUV
           end if
         end do
       end do
-!    Cell-Linking method for small cell
+
+    ! Cell-Linking method for small cell
       do i=1,Isize-1
         do j=1,Jsize
           if(UCell%MoExCell(i,j)==1) then
             ii=UCell%MsCe(i,j,1)
             jj=UCell%MsCe(i,j,2)
-       !     TVar%u(i,j)= 0.d0 !Pred%u(i,j)!-GradPUV(ii,jj)/PU%Dp(ii,jj)*PU%Dp(i,j)
+       !     TVar%u(i,j)=0.d0 !Pred%u(i,j)!-GradPUV(ii,jj)/PU%Dp(ii,jj)*PU%Dp(i,j)
           end if
         end do
       end do
+      ! Correct v
       do i=1,Isize
         do j=1,Jsize-1
           GRadPUV(i,j)=0.d0
@@ -151,7 +172,7 @@ Module ComputePUV
         end do
       end do
 
- !    Cell-Linking method for small cell
+      ! Cell-Linking method for small cell
       do i=1,Isize
         do j=1,Jsize-1
           if(VCell%MoExCell(i,j)==1) then
@@ -174,13 +195,14 @@ Module ComputePUV
 !                          PCell%WEdge_Area(Isize,j)*PGrid%dy(Isize,j))/        &
 !                          PCell%EEdge_Area(Isize,j)/PGrid%dy(Isize,j)
 !      end do
+      ! Compute the velocity at the boundary such that the global mass is conserved.
       do i = 1,Isize
         TVar%v(i,Jsize)=((-TVar%u(i,Jsize)*PCell%EEdge_Area(i,Jsize)           &
                 +TVar%u(i-1,Jsize)*PCell%WEdge_Area(i,Jsize))*PGrid%dy(i,Jsize)&
                 +TVar%v(i,Jsize-1)*PCell%SEdge_Area(i,Jsize)*PGrid%dx(i,Jsize))&
                                   /PGrid%dx(i,Jsize)/PCell%NEdge_Area(i,Jsize)
       end do
-
+      ! Compute the mass error.   
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           TVar%mres(i,j)=(TVar%u(i,j)*PCell%EEdge_Area(i,j)-TVar%u(i-1,j)*     &
@@ -188,30 +210,6 @@ Module ComputePUV
                         +(TVar%v(i,j)*PCell%NEdge_Area(i,j)-TVar%v(i,j-1)*     &
                           PCell%SEdge_Area(i,j))*PGrid%dx(i,j)                 &
                          -BoomCase%vs*PCell%nyS(i,j)*PCell%WlLh(i,j)
-     !                   +((1.d0-PCell%vofS(i,j))-(1.d0-PCellO%vofS(i,j)))*     &
-     !                     PGrid%dx(i,j)*PGrid%dy(i,j)
-          if(dabs(TVar%mres(i,j))>1.d-10.and.PCell%Posnu(i,j)/=-1) then
-!            print*,'Problem mass conservation'
-!            print*,i,j,itt
-!            print*,Tvar%mres(i,j)
-!            print*,PCell%vof(i,j),PCell%vofS(i,j)
-!            print*,PCell%Posnu(i,j)
-!            print*,PCell%EEdge_Area(i,j),PCell%WEDge_Area(i,j)
-!            print*,PCell%SEdge_Area(i,j),PCell%NEdge_Area(i,j)
-!            print*,
-!            print*,BoomCase%vs*PCell%nyS(i,j)*PCell%WlLh(i,j)
-!            print*,(TVar%u(i,j)*PCell%EEdge_Area(i,j)-TVar%u(i-1,j)*           &
-!                          PCell%WEdge_Area(i,j))*PGrid%dy(i,j)                 &
-!                        +(TVar%v(i,j)*PCell%NEdge_Area(i,j)-TVar%v(i,j-1)*     &
-!                          PCell%SEdge_Area(i,j))*PGrid%dx(i,j)
-!            print*,
-!            print*,BoomCase%vs,PCell%nyS(i,j),PCell%WlLh(i,j)
-!            print*,TVar%v(i,j-1),TVar%v(i,j)
-!            print*,TVar%u(i-1,j),TVar%u(i,j)
-!            print*,Pred%u(i,j)
-!            print*,
-        !    pause 'solver_mod_219'
-          end if
           if(PCell%vofS(i,j)>1.d0-epsi) TVar%mres(i,j)=0.d0
         end do
       end do

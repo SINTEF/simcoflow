@@ -1,0 +1,3 @@
+To generate code document, using the command line:
+ford -p ./page/ -I/opt/hypre2.17/include -I/opt/openmpi4.0.1/include ./ford/simco.md
+

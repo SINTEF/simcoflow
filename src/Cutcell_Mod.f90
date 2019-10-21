@@ -1,4 +1,16 @@
 Module Cutcell
+ !! Description:
+ !! The module provides all information about cut-cell. 
+ !! Cells inside the solid will be excluded from computational work.  
+ ! Current Code Owner: SIMCOFlow
+ ! Code Description:
+ ! Language: Fortran 90.
+ ! Software Standards: "European Standards for Writing and
+ ! Documenting Exchangeable Fortran 90 Code".
+ !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ! Author : Son Tung Dang
+ !        : NTNU,SINTEF
+ ! Date : 20.09.2019  
     USE PrecisionVar
     USE Mesh
     USE StateVariables
@@ -16,11 +28,16 @@ Module Cutcell
     End interface
     Contains
       Subroutine Grid_Preprocess(PGrid,UGrid,VGrid,PCell,UCell,VCell,TVar,itt)
+	!! The subroutine compute the surface area and define solid cells.  	
         IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
+        !! The grid
         TYPE(Cell),INTENT(INOUT):: PCell,UCell,VCell
+        !! The cell 
         TYPE(Variables),INTENT(IN):: TVar
+	!! The state variables
         INTEGER(kind=it8b),INTENT(IN):: itt
+	!! The number of iterations 
         INTEGER(kind=it4b):: i,j
         call Cell_Geo_Cal(PGrid,PCell)
         call Cell_Geo_Cal(UGrid,UCell)
@@ -32,9 +49,12 @@ Module Cutcell
       End subroutine Grid_Preprocess
 
       Subroutine Cell_Geo_Cal(TGrid,TCell)
+	!! The subroutine computes the surface area for cut cell. 
         IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: TGrid
+	!! The grid
         TYPE(Cell),INTENT(INOUT):: TCell
+	!! The cell
         TYPE(Point):: Pt(0:1,0:1),FaCe
         INTEGER(kind=it4b):: i,j,ii,jj,ctr
         REAL(KIND=dp):: Nodels(0:1,0:1),MaxFace,AverageArea
@@ -55,6 +75,7 @@ Module Cutcell
                 Pt(ii,jj)%y=-TGrid%dy(i,j)*(0.5d0-dble(jj))
               end do
             end do
+	    ! Calculate the surface area and the center for cell face 
             call Edge_Geo_Cal(Pt(0,0),Pt(0,1),TCell%nxs(i,j),TCell%nys(i,j),   &
                                     TCell%phis(i,j),TCell%WEdge_Area(i,j),FaCe)
             FCW(i,j,1)=Face%x
@@ -202,15 +223,6 @@ Module Cutcell
             TCell%WEdge_Area(i+1,j)=AverageFace
           end do
         end do
-!        print*,'test cutcell 205'
-!        print*,TCell%vofS(299,76)
-!        print*,TCell%WEDge_Area(299,76),TCell%EEDge_Area(299,76)
-!        print*,TCell%SEDge_Area(299,76),TCell%NEDge_Area(299,76)
-!        print*,
-!        print*,TCell%vofS(299,77)
-!        print*,TCell%WEDge_Area(299,77),TCell%EEDge_Area(299,77)
-!        print*,TCell%SEDge_Area(299,77),TCell%NEDge_Area(299,77)
-!        print*,
    !    Modify the face area for sharing cell
         do i=1,Isize
           do j=1,Jsize
@@ -283,19 +295,6 @@ Module Cutcell
             end do
           end do
         end if
-!        print*,'test cutcell 259'
-!        if((.not.allocated(TCell%MoExCell))) then
-!        print*,'***********************************************'
-!        print*,'this is pcell'
-!        end if
-!        print*,TCell%vofS(299,76)
-!        print*,TCell%WEDge_Area(299,76),TCell%EEDge_Area(299,76)
-!        print*,TCell%SEDge_Area(299,76),TCell%NEDge_Area(299,76)
-!        print*,
-    !    print*,TCell%vofS(299,77)
-    !    print*,TCell%WEDge_Area(299,77),TCell%EEDge_Area(299,77)
-    !    print*,TCell%SEDge_Area(299,77),TCell%NEDge_Area(299,77)
-    !    pause 'end test cutcell 267'
         deallocate(FCW,FCS)
       end subroutine Cell_Geo_Cal
 
@@ -540,8 +539,8 @@ Module Cutcell
                                   VCell%SEdge_Area(i,j))*VGrid%dy(i,j))**2.d0)
           end do
         end do
-      ! Define other Coefficients which are used for convective flux and diffusive calculation
-      ! For UCell
+        ! Define other Coefficients which are used for convective flux and diffusive calculation
+        ! For UCell
         call EastFaceInterpolationInf(UCell,UGrid,PGrid,1)
         call NorthFaceInterpolationInf(UCell,UGrid,VGrid,0)
         call EastFaceInterpolationInf(VCell,VGrid,UGrid,0)
