@@ -175,35 +175,27 @@ Module Particles
                                             isnan(upn(i)).or.isnan(vpn(i))) then
               print*,i
               print*,axp(i),dtp
-              print*,
               print*,(1.d0-gama)/(gama+Ca)*this%gx,3.d0*Cd/8.d0/(this%dp(i)/2.d0)/   &
                    (gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
               print*,3.d0*Cd/8.d0,(this%dp(i)/2.d0)
               print*,(gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
-              print*,
               print*,Reyp
-              print*,
               print*,'What the fuck'
               print*,this%uvp(i)%u,this%uvp(i)%v
               print*,nupp
               print*,PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)
               print*,(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
                      (1.d0-PCell%vofS(ii,jj)+tol)
-              print*,
               print*,Upo(i),exp(-beta*dtp),ug*(1.d0-exp(-beta*dtp))
               print*,sig,beta,(1.d0-exp(-beta*dtp))
               print*,upn(i),upo(i)
-              print*,
               print*,dudx,dvdy
-              print*,
               print*,beta,sig,exp(-beta*dtp)
-              print*,
               print*,(1.d0-gama),(gama+Ca)
               print*,gama,this%gx
               print*,Cd,(this%dp(i)/2.d0)
               print*,upo(i),ug
               print*,ug0,Var%u(ii,jj),Var%u(ii-1,jj)
-              print*,
               print*,this%Posp(i)%x,this%Posp(i)%y
               print*,PCell%vof(ii,jj)
               print*, 'Particle 127'

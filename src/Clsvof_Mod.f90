@@ -1814,7 +1814,6 @@ Module Clsvof
             CosPar=dabs(Vset(ii,1)*vx+Vset(ii,2)*vy)/(dsqrt(Vset(ii,1)**2.d0+  &
                               Vset(ii,2)**2.d0)*dsqrt(vx**2.d0+vy**2.d0))
             print*,vx,vy
-            print*,
             if(CosPar>=MaxVect) then
               MaxVect=CosPar
               Imv = ii
@@ -2405,7 +2404,6 @@ Module Clsvof
           print*,vol
           print*,dis
           print*,nxx,nyy
-          print*,
         end if
         vfl(1,j)=vol
         phi(1,j)=dis

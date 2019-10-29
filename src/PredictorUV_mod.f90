@@ -111,10 +111,10 @@ Module PredictorUV
           print*,itt
           print*,TraPar%Posp(i)%x,TraPar%Posp(i)%y
           print*,TraPar%dp(i)
-          print*,
+          print*, ""
           print*,UGrid%x(1,1)-UGrid%dx(1,1)/2.d0
           print*,UGrid%x(1,1)+UGrid%dx(1,1)/2.d0
-          print*,
+          print*, ""
           print*,TraPar%uvp(i)%u,TraPar%uvp(i)%v
           print*, 'problem with algorithm locating particles in UCell_PredictorUv_105'
           TraPar%uvp(i)%u=TraPar%UParInlet
@@ -415,7 +415,7 @@ Module PredictorUV
               print*,i,j
               print*,VCell%vofS(i,j)
               print*,VCell%Posnu(i,j)
-              print*,
+              print*, ""
               print*,FluxDiv(i,j,2)
               print*, 'PredictorUV_218'
               read(stdin,*)
@@ -490,7 +490,7 @@ Module PredictorUV
                           (TVar%Roref*TVar%Uref**2.d0/VGrid%Lref)/TraPar%zp/Vro(ii,jj)
               print*,TraPar%mp(i)/TraPar%tp(i)/TraPar%VRelG(i)/                &
                     (TVar%Roref*TVar%Uref/VGrid%Lref)/TraPar%zp/Vro(ii,jj)
-              print*,
+              print*, ""
               print*,TraPar%mp(i),TraPar%tp(i),TraPar%VRelG(i)
               print*,TVar%Roref*TVar%Uref/VGrid%Lref,TraPar%zp,Vro(ii,jj)
               print*, 'Momentum Particle 425'
@@ -732,16 +732,16 @@ Module PredictorUV
               if(isnan(values(nnz)).or.dabs(values(nnz))>1.d20) then
                 print*,i,j,values(nnz)
                 print*,iu
-                print*,
+                print*, ""
                 print*,aE,aW
                 print*,aN,aS
-                print*,
+                print*, ""
                 print*,Dn,Fnm
                 print*,DifFluxNS(i,j+1,1)
                 print*,'test UVCell'
                 print*,TCell%SyN(i,j),TCell%SyN(i,j+1),TCell%SyN(i,j-1)
                 print*,TCell%Cell_Cent(i,j,2),TCell%Cell_Cent(i,j+1,2),TCell%Cell_Cent(i,j-1,2)
-                print*,
+                print*, ""
                 print*,Sp
                 print*, 'predictoruv_760'
                 read(stdin,*)
@@ -1004,7 +1004,7 @@ Module PredictorUV
               if(dabs(Flux(i,j,2))>1.d10) then
                 print*,vs,eta,vb
                 print*,VCell%AlN(i,j-1),VCell%EtaN(i,j-1)
-                print*,
+                print*, ""
               end if
             end if
           end if

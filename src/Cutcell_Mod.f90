@@ -687,17 +687,17 @@ Module Cutcell
               if(isnan(TCell%DAlN(i,j))) then
                 print*,i,j
                 print*,iv
-                print*,
+                print*, ""
                 print*,TCell%MoExCell(i,j)
-                print*,
+                print*, ""
                 print*,TCell%nxS(i,j),TCell%nyS(i,j)
                 print*,TCell%phiS(i,j)
-                print*,
+                print*, ""
                 print*,TCell%vofS(i,j),TCell%vofS(i,j+1)
-                print*,
+                print*, ""
                 print*,TCell%Cell_Cent(i,j+1,1),TCell%Cell_Cent(i,j,1)
                 print*,TCell%Cell_Cent(i,j+1,2),TCell%Cell_Cent(i,j,2)
-                print*,
+                print*, ""
                 print*,Sx,nxf
                 print*,'CutCell_615'
               end if
