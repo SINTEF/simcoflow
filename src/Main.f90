@@ -33,11 +33,10 @@ Program Main
     REAL(KIND=dp):: vel,Uref,Vint, ha, hw, UwInlet, UgInlet, nuref
     REAL(dp) :: t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, LChannel, kw, omew, HDomain
     TYPE(TsimcoMesh) :: simcomesh
-    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght, NParInlet, IParInlet
+    INTEGER(it4b) :: Isize, Jsize, NParInlet, IParInlet
     LOGICAL :: RunAgain, ICorProb
     INTEGER(it8b) :: IttRun 
     CHARACTER*70 :: dir
-    call getMeshSizes(ibeg, jbeg, ighte=ight, jghte=jght)
     open(unit=5,file='input.dat',action='read')
     read(5,*)
     read(5,*) Isize, Jsize, Irec, Jrec, Rey, Hw, iprint
