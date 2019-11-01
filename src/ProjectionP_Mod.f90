@@ -1,8 +1,17 @@
-!*********************************************************************
-!* For cut-cell method
-!* To avoid the singularity we also solve the internal cell and set up
-!* the value of internal cell afterwards.
 Module ProjectionP
+ !! Description:
+ !! The module compute the projection step for pressure.
+ !! Method:
+ !! The linear system will be solved by HYPRE.
+ ! Current Code Owner: SIMCOFlow
+ ! Code Description:
+ ! Language: Fortran 90.
+ ! Software Standards: "European Standards for Writing and
+ ! Documenting Exchangeable Fortran 90 Code".
+ !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ! Author : Son Tung Dang
+ !        : NTNU,SINTEF
+ ! Date : 20.09.2019
     USE PrecisionVar
     USE Mesh
     USE Cutcell
@@ -12,8 +21,6 @@ Module ProjectionP
     IMPLICIT NONE
     PRIVATE
     REAL(KIND=dp),DIMENSION(:,:),POINTER:: p,u,v
-    REAL(KIND=dp),PARAMETER:: amp = 1.d0
-    REAL(KIND=dp),PARAMETER:: alp=0.4d0,bet=0.5d0
     REAL(KIND=dp),DIMENSION(:,:,:),ALLOCATABLE:: PoCoef,HJump   ! the coefficient for Poisson solving
     TYPE,PUBLIC:: Projection
       REAL(KIND=dp),DIMENSION(:,:),ALLOCATABLE:: Pp
@@ -25,16 +32,30 @@ Module ProjectionP
     CONTAINS
     SUBROUTINE PoissonEquationSolver(PGrid,UGrid,VGrid,PCellO,PCell,UCell,     &
                                      VCell,TVar,TPred,PU,PV,Proj,vb,dt,itt)
+      !! The subroutine is solving the Poisson like equation	
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
-      TYPE(Cell),INTENT(IN):: PCellO,PCell,UCell,VCell
+      !! The grid	 	
+      TYPE(Cell),INTENT(IN):: PCellO
+      !! The old pressure cell	
+      TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
+      !! The current pressure cell 	
+      TYPE(Cell),INTENT(IN):: UCell,VCell
+      !! The current velocity cell 
       TYPE(Variables),INTENT(IN),target:: TVar
+      !! The state variables	
       TYPE(Predictor),INTENT(IN),target:: TPred
+      !! The predicted velocities
       TYPE(Projection),INTENT(INOUT),target:: Proj
+      !! The projection pressure  	
       TYPE(PoissonCoefficient),INTENT(IN):: PU,PV
+      !! The coefficient for Poisson equation 
       REAL(KIND=dp),INTENT(IN):: vb
+      !! The boundary velocity	 
       INTEGER(kind=it8b),INTENT(IN):: itt
+      !! The iteration step	
       REAL(KIND=dp),INTENT(IN):: dt
+      !! The time step	
       INTEGER*8:: A,parcsr_A,b,par_b,x,par_x,solver,precond
       INTEGER(kind=it4b):: num_iterations,i,j
       REAL(KIND=dp):: final_res_norm,tol,resi
@@ -50,16 +71,17 @@ Module ProjectionP
       call ComputePossionMatrixCoefficient(PGrid,UGrid,VGrid,PCell,UCell,      &
                                                              VCell,PU,PV)
       call SetBasicSolver(solver,precond)
-!     call SetBasicSolver(solver=solver,ierr=ierr)
-!     WB,EB,SB,NB
+      ! call SetBasicSolver(solver=solver,ierr=ierr) 
+      ! The order of boundary condition WB,EB,SB,NB. 1 represent  
+      !
       call SetPoissonMatrix(A,parcsr_A,PGrid,PCell,1,1,1,0,matr,itt)
       call SetPoissonVectors(b,x,par_b,par_x,PGrid,PCellO,PCell,vb,dt,rhm,itt)
       call HYPRE_ParCSRPCGSetup(solver,parcsr_A,par_b,par_x,ierr)
       call HYPRE_ParCSRPCGSolve(solver,parcsr_A,par_b,par_x,ierr)
-!     Run info - needed logging turned on
+      ! Run info - needed logging turned on
       call HYPRE_ParCSRPCGGetNumIterations(solver,num_iterations,ierr)
       call HYPRE_ParCSRPCGGetFinalRelative(solver,final_res_norm,ierr)
-!     call HYPRE_ParCSRPCGGetResidual(solver,tol,ierr)
+      ! Call HYPRE_ParCSRPCGGetResidual(solver,tol,ierr)
       call DeltaPressureGetValues(x,PCell,Proj)
       call DeltaPressureBoundaryCondition(Proj,1,1,1,0)
       call HYPRE_IJMatrixDestroy(A,ierr)
@@ -99,71 +121,80 @@ Module ProjectionP
     END SUBROUTINE PoissonEquationSolver
 
     SUBROUTINE SetBasicSolver(solver,precond)
+      !! The subroutine set up the solver and preconditioning for HYPRE	
       IMPLICIT NONE
       INTEGER*8,INTENT(INOUT):: solver
+      !! The Id for solver method	
       INTEGER*8,INTENT(INOUT),optional:: precond
-!       Set up and use a solver
+      !! The Id for preconditioning method	
+      ! Set up and use a solver
       call HYPRE_ParCSRPCGCreate(MPI_COMM_WORLD,solver,ierr)
-!       Set some PARAMETERs
+      ! Set some PARAMETERs
       call HYPRE_ParCSRPCGSetMaxIter(solver,50,ierr)
-!      call HYPRE_ParCSRPCGSetAbsoluteTol(solver,1.d-14,ierr)
-!      call HYPRE_ParCSRPCGSetResidualTol(solver,1.0d-14,ierr)
+      ! call HYPRE_ParCSRPCGSetAbsoluteTol(solver,1.d-14,ierr)
+      ! call HYPRE_ParCSRPCGSetResidualTol(solver,1.0d-14,ierr)
       call HYPRE_ParCSRPCGSetTol(solver,1.0d-20,ierr)
       call HYPRE_ParCSRPCGSetTwoNorm(solver,0,ierr)
-!      call HYPRE_ParCSRPCGSetPrintLevel(solver,2,ierr)
+      ! call HYPRE_ParCSRPCGSetPrintLevel(solver,2,ierr)
       call HYPRE_ParCSRPCGSetLogging(solver,1,ierr)
-!      Now set up the AMG preconditioner and specify any PARAMETERs
+      ! Now set up the AMG preconditioner and specify any PARAMETERs
       if(present(precond)) then
         call HYPRE_BoomerAMGCreate(precond,ierr)
-!        Set some PARAMETERs
-!        Print less solver info since a preconditioner
-!        call HYPRE_BoomerAMGSetPrintLevel(precond,1,ierr);
-!        falgout coarsening
+        ! Set some PARAMETERs
+        ! Print less solver info since a preconditioner
+        ! call HYPRE_BoomerAMGSetPrintLevel(precond,1,ierr);
+        ! falgout coarsening
         call HYPRE_BoomerAMGSetCoarsenTYPE(precond,6,ierr)
-!        SYMMETRIC G-S/Jacobi hybrid relaxation
+        ! SYMMETRIC G-S/Jacobi hybrid relaxation
         call HYPRE_BoomerAMGSetRelaxTYPE(precond,6,ierr)
-!        Sweeeps on each level
+        ! Sweeeps on each level
         call HYPRE_BoomerAMGSetNumSweeps(precond,1,ierr)
-!        conv. tolerance
+        ! conv. tolerance
         call HYPRE_BoomerAMGSetTol(precond,0.0d0,ierr)
-!        do only one iteration!
+        ! do only one iteration!
         call HYPRE_BoomerAMGSetMaxIter(precond,10,ierr)
-!        set amg as the pcg preconditioner
-!         precond_id = 2
+        ! set amg as the pcg preconditioner
+        ! precond_id = 2
         call HYPRE_ParCSRPCGSetPrecond(solver,2,precond,ierr)
       end if
     END SUBROUTINE SetBasicSolver
 
     SUBROUTINE SetPoissonMatrix(A,parcsr_A,PGrid,PCell,WB,EB,SB,NB,matr,itt)
+      !! The subroutine set up matrix coefficients for linear system
       IMPLICIT NONE
       INTEGER*8,INTENT(INOUT):: A,parcsr_A
+      !! The Id for matrix
       TYPE(Grid),INTENT(IN):: PGrid
+      !! The grid	
       TYPE(Cell),INTENT(IN):: PCell
-      INTEGER(kind=it4b),INTENT(IN):: WB,EB,SB,NB ! boundary condition for west face, east face,
-                                                    ! south face, north face, 0: Dirichlet, 1: Neumann
+      !! The cell
+      INTEGER(kind=it4b),INTENT(IN):: WB,EB,SB,NB 
+      !! Boundary condition for west face, east face,
+      !! south face, north face, 0: Dirichlet, 1: Neumann
       INTEGER(kind=it8b),INTENT(IN):: itt
+      !! The iteration steps
       INTEGER(kind=it4b):: nnz,ictr,ilower,iupper,cols(0:4)
       INTEGER(kind=it4b):: i,j,ii,jj
       REAL(KIND=dp):: values(0:4)
-      REAL(KIND=dp):: dx,dy,test,nesu,diag,tol,mindiag
+      REAL(KIND=dp):: dx,dy,test,nesu,diag,tol
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: matr
       ilower = 0
       iupper = PCell%ExtCell
       tol = 1.d-24
-    ! Create and Set up matrix
+      ! Create and Set up matrix
       call HYPRE_IJMatrixCreate(MPI_COMM_WORLD,ilower,iupper,ilower,iupper,    &
                                                                         A,ierr)
       call HYPRE_IJMatrixSetObjectTYPE(A,HYPRE_PARCSR,ierr)
       call HYPRE_IJMatrixInitialize(A,ierr)
-!     Now go through my local rows and set the matrix entries.
-!     Each row has at most 5 entries. For example, if n=3:
-!
-!      A = [M -I 0; -I M -I; 0 -I M]
-!      M = [4 -1 0; -1 4 -1; 0 -1 4]
-!
-!     Note that here we are setting one row at a time, though
-!     one could set all the rows together (see the User's Manual).
-!      mindiag=1.d10
+      ! Now go through my local rows and set the matrix entries.
+      ! Each row has at most 5 entries. For example, if n=3:
+      !
+      ! A = [M -I 0; -I M -I; 0 -I M]
+      ! M = [4 -1 0; -1 4 -1; 0 -1 4]
+      !
+      ! Note that here we are setting one row at a time, though
+      ! one could set all the rows together (see the User's Manual).
+      ! mindiag=1.d10
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           if(PCell%Posnu(i,j)/=-1) then
@@ -176,7 +207,7 @@ Module ProjectionP
             nnz=0
             values=0.d0
             cols=0
-          ! Bottom of current cell
+            ! Bottom of current cell
             if(j>jbeg) then
               if(PCell%Posnu(i,j-1)/=-1) then
                 cols(nnz)=PCell%Posnu(i,j-1)
@@ -186,7 +217,7 @@ Module ProjectionP
                 nnz=nnz+1
               end if
             end if
-          ! West of current cell
+            ! West of current cell
             if(i>ibeg) then
               if(PCell%Posnu(i-1,j)/=-1) then
                 cols(nnz)=PCell%Posnu(i-1,j)
@@ -196,22 +227,18 @@ Module ProjectionP
                 nnz=nnz+1
               end if
             end if
-          ! Set the diagonal cell
+            ! Set the diagonal cell
             cols(nnz)=PCell%Posnu(i,j)
             values(nnz)=PoCoef(i,j,1)*PCell%SEdge_Area(i,j)+                   &
                         PoCoef(i,j,2)*PCell%WEdge_Area(i,j)+                   &
                         PoCoef(i,j,3)*PCell%EEdge_Area(i,j)+                   &
                         PoCoef(i,j,4)*PCell%NEdge_Area(i,j)
-          !  values(nnz)=PoCoef(i,j,1)+                 &
-          !              PoCoef(i,j,2)*PCell%WEdge_Area(i,j)+                 &
-          !              PoCoef(i,j,3)*PCell%EEdge_Area(i,j)+                 &
-          !              PoCoef(i,j,4)
             if(isnan(Values(nnz)).or.dabs(Values(nnz))>1.d10) then
               print*,i,j,Values(nnz)
               print*,PoCoef(i,j,1),PoCoef(i,j,2),PoCoef(i,j,3),PoCoef(i,j,4)
               pause 'ProjectP_195 Bugs, you are again!'
             end if
-          ! Apply boundary condition for matrix
+            ! Apply boundary condition for matrix
             if(SB==1.and.j==jbeg) then
               values(nnz)=values(nnz)-PoCoef(i,j,1)*PCell%SEdge_Area(i,j)
             end if
@@ -227,11 +254,6 @@ Module ProjectionP
             values(nnz)=values(nnz)+dsign(1.d0,values(nnz))*tol
             diag=dabs(values(nnz))
             matr(i,j,3)=values(nnz)
-!            if(mindiag>dabs(values(nnz))) then
-!              ii=i
-!              jj=j
-!              mindiag=dabs(values(nnz))
-!            end if
             nnz=nnz+1
             ! East of current cell
             if(i<ibeg+Isize-1) then
@@ -254,31 +276,31 @@ Module ProjectionP
               end if
             end if
             call HYPRE_IJMatrixSetValues(A,1,nnz,ictr,cols,values,ierr)
-!            if(i==299.and.(j==76.or.j==77)) then
-!              print*,i,j
-!              print*,PCell%vofS(i,j)
-!              print*,PCell%SEdge_ARea(i,j),PCell%NEdge_Area(i,j)
-!              print*,PCell%WEdge_Area(i,j),PCell%EEdge_Area(i,j)
-!              print*,
-!            end if
           end if
         end do
       end do
-!      print*,'*************************_End test Projection'
-!      print*,ii,jj
-!      print*,mindiag
-!      print*,'----------------------'
       call HYPRE_IJMatrixAssemble(A,ierr)
       call HYPRE_IJMatrixGetObject(A,parcsr_A,ierr)
     end subroutine SetPoissonMatrix
 
     subroutine SetPoissonVectors(b,x,par_b,par_x,PGrid,PCellO,PCell,vb,dt,rhm,itt)
-        INTEGER*8:: b,x,par_b,par_x
+      !! The subroutine setup the right hand side vector and roots for linear system
+        INTEGER*8,INTENT(IN):: b,par_b
+        !! The id of right hand side vector
+        INTEGER*8,INTENT(IN):: x,par_x
+	!! The id of roots
         TYPE(Grid),INTENT(IN):: PGrid
-        TYPE(Cell),INTENT(IN):: PCellO,PCell
-        REAL(KIND=dp),INTENT(IN):: vb
+	!! The grid
+        TYPE(Cell),INTENT(IN):: PCellO
+	!! The old pressure cell 
+	TYPE(Cell),INTENT(IN):: PCell
+        !! The current pressure cell         
+	REAL(KIND=dp),INTENT(IN):: vb
+	!! The boundary velocity 
         REAL(KIND=dp),INTENT(IN):: dt
+	!! The time step size
         INTEGER(kind=it8b),INTENT(IN):: itt
+        !! The iteration steps
         INTEGER(kind=it4b):: i,j,ii,jj
         INTEGER:: ilower,iupper,ictr,local_size
         REAL(KIND=dp):: dx,dy,beta(2),maxvect
@@ -302,7 +324,7 @@ Module ProjectionP
         call HYPRE_IJVectorSetObjectTYPE(x,HYPRE_PARCSR,ierr)
         call HYPRE_IJVectorInitialize(x,ierr)
         ExtFlux(:,:) = 0.d0
-!        maxvect=0.d0
+        ! maxvect=0.d0
         do i = ibeg,ibeg+Isize-1
           do j = jbeg,jbeg+Jsize-1
             ictr=PCell%PosNu(i,j)
@@ -323,28 +345,14 @@ Module ProjectionP
                 print*,u(i,j),u(i-1,j),v(i,j),v(i,j-1),i,j
                 pause 'bugs, projection 476'
               endif
-!              if(maxvect<dabs(rhs(ictr))) then
-!                maxvect=dabs(rhs(ictr))
-!                ii=i
-!                jj=j
-!              end if
-            !  if(i==294.and.j==190) then
-            !    print*,i,j
-            !    print*,vb,PCell%nyS(i,j),PCell%WlLh(i,j)
-            !    print*,
-            !  end if
             endif
           end do
         end do
-!        print*,'oooooooooooooooooo'
-!        print*,maxvect
-!        print*,ii,jj
-!        print*,'iiiiiiiii_Test vector'
         call HYPRE_IJVectorSetValues(b,local_size,rows,rhs,ierr)
         call HYPRE_IJVectorSetValues(x,local_size,rows,xval,ierr)
         call HYPRE_IJVectorAssemble(b,ierr)
         call HYPRE_IJVectorAssemble(x,ierr)
-      ! get the x and b objects
+        ! get the x and b objects
         call HYPRE_IJVectorGetObject(b,par_b,ierr)
         call HYPRE_IJVectorGetObject(x,par_x,ierr)
         deallocate(rhs)
@@ -354,6 +362,7 @@ Module ProjectionP
     end subroutine SetPoissonVectors
 
     subroutine DeltaPressureGetValues(x,PCell,Projp)
+      !! The subroutine will get the roots from HYPRE. 	
         INTEGER*8,INTENT(IN):: x
         TYPE(Cell),INTENT(IN):: PCell
         TYPE(Projection),INTENT(INOUT):: Projp
@@ -394,10 +403,14 @@ Module ProjectionP
 
     subroutine ComputePossionMatrixCoefficient(PGrid,UGrid,VGrid,PCell,UCell,  &
                                                                  VCell,PU,PV)
-        IMPLICIT NONE
+      !! The subroutine compute the cofficients following Ghos Point Method        
+	IMPLICIT NONE
         TYPE(Grid),INTENT(IN):: PGrid,UGrid,VGrid
+      !! The grid	
         TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
+      !! The cell	
         TYPE(PoissonCoefficient),INTENT(IN):: PU,PV
+      !! The velocity coefficient for possion like equation 	
         REAL(KIND=dp):: BetaP,BetaM,BetaW,BetaD,Lamda,tol
         INTEGER(kind=it4b):: i,j
       ! Set Coefficient for W,E,S,N
@@ -580,9 +593,12 @@ Module ProjectionP
     End Subroutine ComputePossionMatrixCoefficient
 
     Subroutine DeltaPressureBoundaryCondition(Proj,WB,EB,SB,NB)
+	!! The subroutine insert boundary condtion for pressure
         IMPLICIT NONE
         TYPE(Projection),INTENT(INOUT):: Proj
+	!! Computed pressure
         INTEGER(kind=it4b),INTENT(IN):: WB,EB,SB,NB
+        !! The flag for boundary condition 
         INTEGER(kind=it4b):: i,j
         Do i = ibeg,ibeg+Isize-1
           Proj%Pp(i,jbeg-1) = dble(SB)*Proj%Pp(i,jbeg)
