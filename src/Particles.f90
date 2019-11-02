@@ -102,14 +102,14 @@ Module Particles
     end do
     deallocate(ranum)
   end subroutine InitializeParticles
-  subroutine TrackingParticles(this, PGrid,PCell,BoomCase,Var,dt)
+  subroutine TrackingParticles(this, PGrid,PCell,Var,dt,BoomCase)
     IMPLICIT NONE
     CLASS(TParticle),INTENT(INOUT):: this 
     TYPE(Grid),INTENT(IN):: PGrid
     TYPE(Cell),INTENT(IN):: PCell
-    TYPE(SolidObject),INTENT(INOUT):: BoomCase
     TYPE(TVariables),INTENT(IN):: Var
     REAL(KIND=dp),INTENT(IN):: dt
+    TYPE(SolidObject),INTENT(IN),optional :: BoomCase
     INTEGER(kind=it4b):: i,ii,jj,itep
     REAL(KIND=dp),DIMENSION(:),allocatable:: Upo,Upn,Vpo,Vpn,axp,ayp
     TYPE(TPoint),DIMENSION(:),allocatable:: xyp
@@ -204,8 +204,10 @@ Module Particles
             Upo(i)=Upn(i)
             Vpo(i)=Vpn(i)
           elseif(PCell%vofS(ii,jj)>1.d0-epsi) then
-            Upn(i)=BoomCase%us
-            Vpn(i)=BoomCase%vs
+            if(present(BoomCase)) then 
+              Upn(i)=BoomCase%us
+              Vpn(i)=BoomCase%vs
+            end if
             xyp(i)%x=xyp(i)%x+0.5d0*(Upn(i)+Upo(i))*dtp
             xyp(i)%y=xyp(i)%y+0.5d0*(Vpn(i)+Vpo(i))*dtp
             Upo(i)=Upn(i)
