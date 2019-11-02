@@ -143,7 +143,7 @@ Module Solver
         if(mod(itt,TraPar%IParInlet)==0) then
           call TraPar%ParticleInletCondition(simcomesh%PGrid,simcomesh%PCell,wave)
         end if
-        call TraPar%TrackingParticles(simcomesh%PGrid,simcomesh%PCell,BoomCase,TVar,Time%dt)
+        call TraPar%TrackingParticles(simcomesh%PGrid,simcomesh%PCell,TVar,Time%dt,BoomCase)
         Time%NondiT = Time%NondiT+Time%dt
         Time%PhysT = Time%Nondit*simcomesh%PGrid%Lref/TVar%URef
         if(itt==1) then
