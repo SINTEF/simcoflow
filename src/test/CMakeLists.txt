@@ -35,6 +35,26 @@ list(APPEND PARTICLELIST
     ../Constants.f90
     ../Clsvof_Mod.f90
     particletest.f90)
- add_executable(testparticle ${PARTICLELIST})
+add_executable(testparticle ${PARTICLELIST})
 target_link_libraries(testparticle ${LINK_LIBS})
 my_add_test(testparticle)
+list(APPEND PARTICLELIST2
+    ${SRC_LIST2}
+    ../Particles.f90
+    ../StateVariables.f90
+    ../Constants.f90
+    ../Clsvof_Mod.f90
+    particletest2.f90)	
+add_executable(testparticle2 ${PARTICLELIST2})
+target_link_libraries(testparticle2 ${LINK_LIBS})
+my_add_test(testparticle2)
+list(APPEND CLSVOFTESTLIST
+    ${SRC_LIST2}
+    ../StateVariables.f90
+    ../Constants.f90
+    ../Cutcell_Mod.f90
+    ../Clsvof_Mod.f90
+    clsvoftest.f90)	
+add_executable(clsvoftest ${CLSVOFTESTLIST})
+target_link_libraries(clsvoftest ${LINK_LIBS})
+my_add_test(clsvoftest)

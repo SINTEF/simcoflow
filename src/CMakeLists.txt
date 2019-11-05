@@ -4,9 +4,9 @@ add_definitions(${MPI_Fortran_COMPILE_FLAGS})
 # Hypre,
 # This should be ectracted out to a FindHYPRE.cmake
 # The paths here are platform dependent. Please edit
-set(HYPRE_INCLUDE_DIR /usr/include/hypre/)
+set(HYPRE_INCLUDE_DIR /usr/include/)
 set(${PROJECT_NAME}_INCLUDE_DIR)
-set(HYPRE_LIBRARIES /usr/lib/x86_64-linux-gnu/libHYPRE_core.so /usr/lib/x86_64-linux-gnu/libHYPRE.so /usr/lib/x86_64-linux-gnu/libHYPRE_FEI.so)
+set(HYPRE_LIBRARIES /usr/lib/libHYPRE.so /usr/lib/libHYPRE_FEI.so /usr/lib/libHYPRE_struct_mv.so /usr/lib/libHYPRE_IJ_mv.so /usr/lib/libHYPRE_parcsr_ls.so)
 include_directories(${MPI_Fortran_INCLUDE_PATH} ${HYPRE_INCLUDE_DIR} ${Simcoflow_INCLUDE_DIR})
 link_directories(${MPI_Fortran_LIBRARIES})
 aux_source_directory(. SRC_LIST)

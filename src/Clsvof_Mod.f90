@@ -19,7 +19,7 @@ Module Clsvof
     REAL(KIND=dp),DIMENSION(:,:),allocatable:: nx,ny
     REAL(KIND=dp),DIMENSION(8,2):: Vset
     PUBLIC:: Initial_Clsvof,Initial_ClsvofUV,Coupled_LS_VOF,ComputeForceObject,&
-             SolidVolumeFraction
+             SolidVolumeFraction,frac
     Interface Initial_Clsvof
       Module procedure Initial_Clsvof
     End interface
@@ -749,8 +749,9 @@ Module Clsvof
        REAL(KIND=dp):: weight(9),sumvol,sumweight,sumweight2,neighvol,voldif
        REAL(KIND=dp):: SumAllVolBig,SumAllVolSmall,ResVol
        REAL(KIND=dp):: del_x,del_y,dttol,vb
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+       
+       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        Vset(1,1)=0.d0;Vset(1,2)=-1.d0
        Vset(2,1)=0.d0;Vset(1,2)=1.d0
        Vset(3,1)=-1.d0;Vset(3,2)=0.d0
@@ -759,6 +760,7 @@ Module Clsvof
        Vset(6,1)=1.d0;Vset(6,2)=0.d0
        Vset(7,1)=1.d0;Vset(7,2)=-1.d0
        Vset(8,1)=1.d0;Vset(8,2)=1.d0
+       
        nv = 6
        vfl=>PCell%vof
        phi=>PCell%phi
@@ -772,6 +774,7 @@ Module Clsvof
        del_y=PGrid%dy(Isize/2,Jsize/2)
        epsil=dsqrt(2.d0)*del_x/2.d-6
        ResVol=1.d0
+       
        allocate(nx(Isize,Jsize))
        allocate(ny(Isize,Jsize))
        allocate(dis(Isize,Jsize))
