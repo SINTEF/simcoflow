@@ -2,6 +2,8 @@ Module StateVariables
     USE PrecisionVar
     USE Constants, ONLY : g, epsi, roa, row
     USE Mesh, ONLY : TsimcoMesh, Grid, Cell, getMeshSizes
+    USE BoundaryFunction, ONLY : BCBase, BCUW, BCUE, BCUS, BCUN, BCVW,         &
+                                 BCVE, BCVS, BCVN, BCPW, BCPE, BCPS, BCPN
     IMPLICIT NONE
     PRIVATE
 !   for run again from
@@ -10,7 +12,7 @@ Module StateVariables
     INTEGER(it8b) :: IttRun
 !   For Wave Braking on vertical wall
     TYPE :: TWave
-     REAL(KIND=dp) :: t0,cw0,Amp0,Depthw,Lamdaw,twp,HChannel,              &
+      REAL(KIND=dp) :: t0,cw0,Amp0,Depthw,Lamdaw,twp,HChannel,                 &
                       LChannel,kw,omew,HDomain
     END TYPE TWave
     TYPE :: TVariables
@@ -123,7 +125,6 @@ Module StateVariables
       this%Fr=Uref/dsqrt(g*Lref)
       print*,"Reynolds number:",this%Rey
       print*,"Froude number:",this%Fr
-   !   call Boundary_Condition_Var(PGrid,PCell,this,0.d0)
     end subroutine Initialize
 
     ! This is kind of artificial
@@ -168,105 +169,108 @@ Module StateVariables
     !      __________Slip Wall_____
     !
     !*******************************************************
-    subroutine Boundary_Condition_Var(PGrid,PCell,Vari,wave,Time)
-      TYPE(Grid),INTENT(IN):: PGrid
-      TYPE(Cell),INTENT(IN):: PCell
-      TYPE(TVariables),INTENT(INOUT):: Vari
-      TYPE(Twave), INTENT(in) :: wave
-      REAL(KIND=dp),INTENT(IN):: Time
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
-      INTEGER(kind=it4b):: i,j,temp
-      REAL(KIND=dp),PARAMETER:: Twall = 300.d0
-      REAL(KIND=dp):: ywu,ywv,xwu,xwv,ywuout,ywvout,xwuout,xwvout,            &
-                      Hwin,Hwout,Hain,Haout
+    subroutine Boundary_Condition_Var(PGrid, PCell, Vari, BCp, BCu, BCv, Time)
+      TYPE(Grid), INTENT(IN)  	      :: PGrid
+      TYPE(Cell), INTENT(IN)  	      :: PCell
+      TYPE(TVariables), INTENT(INOUT) :: Vari
+      TYPE(BCBase), INTENT(INOUT)     :: BCu, BCv, BCp  	
+      REAL(KIND=dp),INTENT(IN)        :: Time
+      INTEGER(it4b) 		      :: ibeg, jbeg, Isize, Jsize, ight, jght
+      INTEGER(kind=it4b)              :: i,j
+
       call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
-      temp=0
-      do j=1,Jsize
-        if(PCell%vof(1,j)>epsi) Hwin=PGrid%y(1,j)-                             &
-                                           (0.5d0-PCell%vof(1,j))*PGrid%dy(1,j)
-        if(PCell%vof(Isize,j)>epsi.and.PCell%vof(Isize,j)<1.d0-epsi) then
-          Hwout=PGrid%y(Isize,j)-(0.5d0-PCell%vof(Isize,j))*PGrid%dy(Isize,j)
-          temp=temp+1
-        end if
-      end do
-      xwu=PGrid%x(1,1)-PGrid%dx(1,1)/2.d0
-      xwv=PGrid%x(1,1)-PGrid%dx(1,1)
-      ywu=wave%Amp0*dsin(wave%kw*(xwu-wave%cw0*Time))
-      ywv=wave%Amp0*dsin(wave%kw*(xwv-wave%cw0*Time))
-
-      xwuout=PGrid%x(Isize,1)+PGrid%dx(Isize,1)/2.d0
-      xwvout=PGrid%x(Isize,1)+PGrid%dx(Isize,1)
-      ywuout=wave%Amp0*dsin(wave%kw*(xwuout-wave%cw0*Time))
-      ywvout=wave%Amp0*dsin(wave%kw*(xwvout-wave%cw0*Time))
-
-      if(temp==2) Hwout=wave%Depthw
-      Hain=wave%HChannel-Hwin
-      Haout=wave%HChannel-Hwout
-      do j = jbeg,Jsize+jbeg-1
-      ! Left inlet water
-        Vari%p(ibeg-ight,j)=Vari%p(ibeg,j) !Vari%Pint/(Vari%Pref)
-        Vari%t(ibeg-ight,j)=Vari%t(ibeg,j)
-        if(PGrid%y(1,j)-Hwin<ywu) then
-          Vari%u(ibeg-ight,j)=Vari%UwInlet-wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*                   &
-                    dsin(wave%kw*(xwu-wave%cw0*Time))*dcosh(wave%kw*PGrid%y(1,j))/dsinh(wave%kw*Hwin)
-        else
-          Vari%u(ibeg-ight,j)=Vari%UgInlet+wave%Amp0*wave%kw*(Vari%UgInlet-wave%cw0)*                   &
-          dsin(wave%kw*(xwu-wave%cw0*Time))*dcosh(wave%kw*(PGrid%y(1,j)-wave%HChannel))/dsinh(wave%kw*Hain)
-        end if
-
-        if(PGrid%y(1,j)-Hwin<ywv) then
-          Vari%v(ibeg-ight,j)=wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*   &
-                  dsinh(wave%kw*(PGrid%y(1,j)+0.5d0*PGrid%dy(1,j)))/dsinh(wave%kw*Hwin)
-        else
-          Vari%v(ibeg-ight,j)=-wave%Amp0*wave%kw*(Vari%UgInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*  &
-              dsinh(wave%kw*(PGrid%y(1,j)+0.5d0*PGrid%dy(1,j)-wave%HChannel))/dsinh(wave%kw*Hain)
-        end if
-
-      ! Right outlet water
-      !  if(PGrid%y(Isize,j)-Hwout<ywuout) then
-        if(PCell%vof(isize,j)>0.5d0) then
-          Vari%u(Isize,j)=Vari%UwInlet!-Amp0*kw*(Vari%UwInlet-cw0)*                       &
-            ! dsin(kw*(xwuout-cw0*Time))*dcosh(kw*PGrid%y(Isize,j))/dsinh(kw*Hwout)
-        else
-          Vari%u(Isize,j)=Vari%UgInlet  !+Amp0*kw*(Vari%UgInlet-cw0)*                       &
-            ! dsin(kw*(xwuout-cw0*Time))*dcosh(kw*(PGrid%y(Isize,j)-HChannel))/ &
-            !                                                     dsinh(kw*Haout)
-        end if
-
-        if(PGrid%y(Isize,j)-Hwout<ywvout) then
-          Vari%v(Isize+1,j)=wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dcos(wave%kw*(xwvout-wave%cw0*Time))*  &
-              dsinh(wave%kw*(PGrid%y(Isize,j)+0.5d0*PGrid%dy(Isize,j)))/dsinh(wave%kw*Hwout)
-        else
-          Vari%v(Isize+1,j)=-wave%Amp0*wave%kw*(Vari%UgInlet-wave%cw0)*dcos(wave%kw*(xwvout-wave%cw0*Time))* &
-              dsinh(wave%kw*(PGrid%y(Isize,j)+0.5d0*PGrid%dy(Isize,j)-wave%HChannel))/   &
-                                                                  dsinh(wave%kw*Haout)
-        end if
-        Vari%p(Isize+ibeg+ight-1,j)=Vari%p(Isize+ibeg-1,j)
-        Vari%u(Isize+ibeg+ight-1,j)=Vari%u(Isize+ibeg-1,j) !Vari%Uint/Vari%Uref
-        Vari%v(Isize+1,j)=Vari%v(Isize+ibeg-1,j)
-      !  Vari%v(Isize+1,j)=0.d0
-      end do
-      do i = ibeg,Isize+ibeg-1
-      ! Bottom boundary
-        Vari%p(i,jbeg-jght)=Vari%p(i,jbeg)
-        Vari%t(i,jbeg-jght)=Vari%t(i,jbeg)
-        Vari%u(i,jbeg-jght)=Vari%u(i,jbeg)
-        xwu=PGrid%x(i,1)+PGrid%dx(i,1)/2.d0
-        Vari%u(i,jbeg-jght)=-wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dsin(wave%kw*(xwu-wave%cw0*Time))*    &
-                        dcosh(wave%kw*(PGrid%y(i,1)-PGrid%dy(i,1)))/dsinh(wave%kw*wave%Depthw)
-        xwv=PGrid%x(i,1)
-        Vari%v(i,jbeg-jght)=wave%Amp0*wave%kw*(Vari%UwInlet-wave%cw0)*dcos(wave%kw*(xwv-wave%cw0*Time))*    &
-                  dsinh(wave%kw*(PGrid%y(i,1)-0.5d0*PGrid%dy(i,1)))/dsinh(wave%kw*wave%Depthw) !0.d0 !Vari%Vint/Vari%Uref
-      ! Open air
-        Vari%p(i,Jsize+jbeg+jght-1)=0.d0
-        Vari%t(i,jbeg+Jsize+jght-1)=Vari%t(i,jbeg+Jsize-1)
-        Vari%u(i,Jsize+jbeg+jght-1)=Vari%u(i,Jsize+jbeg-1)
-     !   Vari%v(i,Jsize+jbeg-1) = Vari%v(i,Jsize+jbeg-2)
-        Vari%v(i,Jsize+jght) = Vari%v(i,Jsize)
-      end do
+      ! Compute the boundary value for u-velocity.
+      ! Western boundary 
+      call BCUW(BCu, PGrid%x(1,:)-PGrid%dx(1,:)/2.d0, PGrid%y(1,:), 	       &
+                PGrid%dx(1,:), PGrid%dy(1,:), Vari%p(1,:), Vari%u(1,:),        &
+                Vari%v(1,:), PCell%vof(1,:), PCell%phi(1,:), Time)
+      Vari%u(ibeg-ight,:) = BCu%VarW(:)
+      ! Eastern boundary
+      call BCUE(BCu, PGrid%x(Isize,:)+PGrid%dx(Isize,:)/2.d0, PGrid%y(Isize,:),&
+                PGrid%dx(Isize,:), PGrid%dy(Isize,:), Vari%p(Isize,:),         &
+                Vari%u(Isize,:), Vari%v(Isize,:), PCell%vof(Isize,:),          &
+                PCell%phi(Isize,:), Time)            
+      Vari%u(Isize+ight,:) = BCu%VarE(:)  
+      ! Southern boundary
+      call BCUS(BCu, PGrid%x(:,1)+PGrid%dx(:,1)/2.d0, 			       &
+  	        PGrid%y(:,1)-PGrid%dy(:,1)/2.d0, PGrid%dx(:,1),                &
+                PGrid%dy(:,1), Vari%p(:,1), Vari%u(:,1),           	       &
+                Vari%v(:,1), PCell%vof(:,1), PCell%phi(:,1), Time)
+      if(BCu%flag(3) == 0) then
+        Vari%u(:,jbeg-jght) = BCu%VarS(:)-Vari%u(:,1)    
+      else
+        Vari%u(:,jbeg-jght) = 2.d0*BCu%VarS(:)-Vari%u(:,1)  
+      end if
+      ! Northern boundary
+      call BCUN(BCu, PGrid%x(:,Jsize)+PGrid%dx(:,Jsize)/2.d0, 		       &
+  	        PGrid%y(:,Jsize)+PGrid%dy(:,Jsize)/2.d0, PGrid%dx(:,Jsize),    &
+                PGrid%dy(:,Jsize), Vari%p(:,Jsize), Vari%u(:,Jsize),           &
+                Vari%v(:,Jsize), PCell%vof(:,Jsize), PCell%phi(:,Jsize), Time)
+      if(BCu%flag(4) == 0) then
+        Vari%u(:,Jsize+jght) = BCu%VarS(:)-Vari%u(:,Jsize)    
+      else
+        Vari%u(:,Jsize+jght) = 2.d0*BCu%VarS(:)-Vari%u(:,Jsize)  
+      end if
+      
+      ! Compute the boundary value for v-velocity
+      ! Western boundary
+      call BCVW(BCv, PGrid%x(1,:)-PGrid%dx(1,:)/2.d0,                          &
+                PGrid%y(1,:)+PGrid%dy(1,:)/2.d0, PGrid%dx(1,:), 	       &
+                PGrid%dy(1,:), Vari%p(1,:), Vari%u(1,:),                       &
+                Vari%v(1,:), PCell%vof(1,:), PCell%phi(1,:), Time)  
+      if(BCv%flag(1) == 0) then
+        Vari%v(ibeg-ight,:) = BCv%VarW(:)-Vari%v(ibeg,:)
+      else
+        Vari%v(ibeg-ight,:) = 2.d0*BCv%VarW(:)-Vari%v(ibeg,:)
+      end if   
+      ! Eastern boundary
+      call BCVE(BCv, PGrid%x(Isize,:)+PGrid%dx(Isize,:)/2.d0,                  &
+                PGrid%y(Isize,:)+PGrid%dy(Isize,:)/2.d0, PGrid%dx(Isize,:),    &
+                PGrid%dy(Isize,:), Vari%p(Isize,:), Vari%u(Isize,:),           &
+                Vari%v(Isize,:), PCell%vof(Isize,:), PCell%phi(Isize,:), Time)  
+      if(BCv%flag(2) == 0) then
+        Vari%v(Isize+ight,:) = BCv%VarE(:)-Vari%v(Isize,:)
+      else
+        Vari%v(Isize+ight,:) = 2.d0*BCv%VarE(:)-Vari%v(Isize,:)
+      end if
+      ! Southern boundary
+      call BCVS(BCv, PGrid%x(:,1), PGrid%y(:,1)-PGrid%dy(:,1)/2.d0, 	       &
+                PGrid%dx(:,1), PGrid%dy(:,1), Vari%p(:,1), Vari%u(:,1),        &
+                Vari%v(:,1), PCell%vof(:,1), PCell%phi(:,1), Time)
+      Vari%v(:,jbeg-jght) = BCv%VarS(:)
+      ! Northern boundary 
+      call BCVN(BCv, PGrid%x(:,Jsize), PGrid%y(:,Jsize)-PGrid%dy(:,Jsize)/2.d0,&
+                PGrid%dx(:,Jsize), PGrid%dy(:,Jsize), Vari%p(:,Jsize),         &
+                Vari%u(:,Jsize), Vari%v(:,Jsize), PCell%vof(:,Jsize),  	       &
+                PCell%phi(:,Jsize), Time) 
+      Vari%v(:,Jsize+jght) = BCv%VarN(:)
+      
+      ! Compute the boundary value for pressure
+      ! Western boundary  
+      call BCpW(BCp, PGrid%x(1,:)+PGrid%dx(1,:)/2.d0, PGrid%y(1,:),            &
+                PGrid%dx(1,:), PGrid%dy(1,:), Vari%p(1,:), Vari%u(1,:),        &
+                Vari%v(1,:), PCell%vof(1,:), PCell%phi(1,:), Time)
+      Vari%p(ibeg-ight,:) = BCp%VarW(:)
+      ! Eastern boundary 
+      call BCpE(BCp, PGrid%x(Isize,:)+PGrid%dx(Isize,:)/2.d0, PGrid%y(Isize,:),&
+                PGrid%dx(Isize,:), PGrid%dy(Isize,:), Vari%p(Isize,:),         &
+                Vari%u(Isize,:), Vari%v(Isize,:), PCell%vof(Isize,:),           &
+                PCell%phi(Isize,:), Time)
+      Vari%p(Isize+ight,:) = BCp%VarE(:)
+      ! Southern boundary
+      call BCpS(BCp, PGrid%x(:,1), PGrid%y(:,1)-PGrid%dy(:,1)/2.d0,            &
+                PGrid%dx(:,1), PGrid%dy(:,1), Vari%p(:,1), Vari%u(:,1),        &
+                Vari%v(:,1), PCell%vof(:,1), PCell%phi(:,1), Time)
+      Vari%p(:,jbeg-jght) = BCp%VarS(:)
+      ! Northern boundary 
+      call BCpN(BCp, PGrid%x(:,Jsize), PGrid%y(:,Jsize)-PGrid%dy(:,Jsize)/2.d0,&
+                PGrid%dx(:,Jsize), PGrid%dy(:,Jsize), Vari%p(:,Jsize),         &
+                Vari%u(:,Jsize), Vari%v(:,Jsize), PCell%vof(:,Jsize),           &
+                PCell%phi(:,Jsize), Time)
+      Vari%p(:,Jsize+jght) = BCp%VarN(:)      
     end subroutine Boundary_Condition_Var
 
-    !The naming scheme is not correct here, FIXME
+    ! The naming scheme is not correct here, FIXME
     SUBROUTINE setSolverVariables(RunAgain_, ICorProb_, IttRun_)
       !
       LOGICAL,       INTENT(in) :: RunAgain_, ICorProb_
@@ -275,7 +279,6 @@ Module StateVariables
       RunAgain = RunAgain_
       ICorProb = ICorProb_
       IttRun   = IttRun_
-
     END SUBROUTINE setSolverVariables
 
     SUBROUTINE getSolverVariables(RunAgain_, ICorProb_, IttRun_)
