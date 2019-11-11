@@ -11,6 +11,7 @@ Module Solver
     USE ComputePUV, ONLY : UpdatePUV
     USE MPI
     USE Particles, ONLY : TParticle
+    USE BoundaryFunction, ONLY : BCBase
     IMPLICIT NONE
     PRIVATE
     INTEGER(it8b) :: IttBegin
@@ -31,13 +32,14 @@ Module Solver
       Module Procedure IterationSolution
     End Interface IterationSolution
     Contains
-    subroutine IterationSolution(simcomesh, TVar, wave,    &
-                                 TraPar,BoomCase,iprint)
+    subroutine IterationSolution(simcomesh, TVar, wave, TraPar, BoomCase, BCp, &
+                                 BCu, BCv, BCVof, BCLvs, iprint)
       IMPLICIT NONE
       TYPE(TsimcoMesh) , INTENT(inout) :: simcomesh
       TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(TWave), INTENT(in) :: wave
       INTEGER(kind=it4b),INTENT(IN):: iprint
+      TYPE(BCBase),INTENT(INOUT)   :: BCp, BCu, BCv, BCVof, BCLvs
       TYPE(TParticle),INTENT(INOUT):: TraPar
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
       TYPE(Cell):: PCellO,UCellO,VCellO
@@ -138,7 +140,7 @@ Module Solver
 !        end if
        ! if(itt==365) pause
         call AdamBasforthCrankNicolson(simcomesh, simcomesh0,  &
-                 wave, TVar,UConv,VConv,PConv,Time,Flux_n1,TraPar, &
+                 wave, TVar,UConv,VConv,PConv,BCp,BCu,BCv,BCVof, BCLvs, Time,Flux_n1,TraPar, &
                  BoomCase,itt)
         if(mod(itt,TraPar%IParInlet)==0) then
           call TraPar%ParticleInletCondition(simcomesh%PGrid,simcomesh%PCell,wave)
@@ -181,7 +183,7 @@ Module Solver
     end subroutine IterationSolution
 
     SUBROUTINE AdamBasforthCrankNicolson(simcomesh, simcomesh0, wave, &
-               TVar,UConv,VConv,PConv,Time,Flux_n1,  &
+               TVar,UConv,VConv,PConv,BCp,BCu,BCv,BCVof,BCLvs,Time,Flux_n1,  &
                TraPar,BoomCase,itt)
       IMPLICIT NONE
       TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
@@ -191,6 +193,7 @@ Module Solver
       TYPE(SolverTime),INTENT(INOUT):: Time
       TYPE(TParticle),INTENT(INOUT):: TraPar
       TYPE(SolverConvergence),INTENT(OUT):: UConv,VConv,PConv
+      TYPE(BCBase),INTENT(INOUT)   :: BCp, BCu, BCv, BCVof, BCLvs
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
       INTEGER(kind=it8b),INTENT(IN):: itt
@@ -239,25 +242,31 @@ Module Solver
       close(10)
       dt=time%dt
       if(itt>1) then
-        call Coupled_LS_VOF(simcomesh%PGrid,simcomesh%PCell,simcomesh%UCell,simcomesh%VCell,TVar,wave, BoomCase,       &
-                                                             Time%NondiT,dt,itt)
-        call Initial_ClsVofUV(simcomesh%PCell,simcomesh%PGrid,simcomesh%UCell,simcomesh%UGrid,VolPar,SPar,VolParU,     &
-                                                             SParU,BoomCase,0)
-        call Initial_ClsVofUV(simcomesh%PCell,simcomesh%PGrid,simcomesh%VCell,simcomesh%VGrid,VolPar,SPar,VolParV,     &
-                                                             SParV,BoomCase,1)
-        call Grid_Preprocess(simcomesh,TVar,itt)
+        call Coupled_LS_VOF(simcomesh%PGrid, simcomesh%PCell, simcomesh%UCell, &
+                            simcomesh%VCell, TVar, wave, BoomCase, Time%NondiT,&
+                            dt, itt)
+        call Initial_ClsVofUV(simcomesh%PCell, simcomesh%PGrid,                &
+                              simcomesh%UCell, simcomesh%UGrid, VolPar, SPar,  &
+                              VolParU, SParU, BoomCase, 0)
+        call Initial_ClsVofUV(simcomesh%PCell, simcomesh%PGrid, 			   &
+                              simcomesh%VCell, simcomesh%VGrid, VolPar, SPar,  &
+                              VolParV, SParV, BoomCase, 1)
+        call Grid_Preprocess(simcomesh, TVar, itt)
         call NewCellFace(simcomesh)
-        call Boundary_Condition_Var(simcomesh%PGrid,simcomesh%PCell,TVar,wave, Time%NondiT)
-        call InterNewVar(simcomesh0%PCell,simcomesh0%UCell,simcomesh0%VCell,simcomesh%PCell,simcomesh%UCell,&
-             &           simcomesh%VCell,simcomesh%PGrid,TVar,    &
-                                                                BoomCase%vs)
+        call Boundary_Condition_Var(simcomesh%PGrid, simcomesh%PCell, TVar,    &
+                                    BCp, BCu, BCv, Time%NondiT)
+        call InterNewVar(simcomesh0%PCell, simcomesh0%UCell, simcomesh0%VCell, &
+                         simcomesh%PCell, simcomesh%UCell, simcomesh%VCell,    &
+                         simcomesh%PGrid, TVar, BoomCase%vs)
       else
         SParU(:,:)=0.d0;SParV(:,:)=0.d0
         VolParU(:,:)=0.d0;VolParV(:,:)=0.d0
       end if
-      call UpdatePUV(simcomesh%UGrid,simcomesh%VGrid,simcomesh%PGrid,simcomesh0%PCell,simcomesh0%UCell, &
-           &         simcomesh0%VCell,simcomesh%PCell,simcomesh%UCell,       &
-           simcomesh%VCell,TVar,Flux_n1,TraPar,VolParU,VolParV,SParU,SParV,BoomCase,dt,itt)
+      call UpdatePUV(simcomesh%UGrid, simcomesh%VGrid, simcomesh%PGrid,        &
+                     simcomesh0%PCell, simcomesh0%UCell, simcomesh0%VCell,     &
+                     simcomesh%PCell, simcomesh%UCell, simcomesh%VCell, TVar,  &
+                     Flux_n1, TraPar, VolParU, VolParV, SParU, SParV, BoomCase,&
+                     dt, itt)
       ! Calculate the three kind of norm for convergence
       deallocate(SPar)
       deallocate(SParU,SParV)

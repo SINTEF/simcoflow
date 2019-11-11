@@ -22,16 +22,19 @@ Program Main
     USE MPI, ONLY : MPI_Initial
     USE Solver, ONLY : IterationSolution
     USE Particles, ONLY : TParticle
+    USE BoundaryFunction, ONLY : BCBase
     IMPLICIT NONE
     TYPE(TPoint):: ReS,ReE, Start_Point, End_Point
-    TYPE(TVariables):: Var
-    TYPE(TWave)     :: wave
-    TYPE(TParticle):: TraPar
-    TYPE(SolidObject):: BoomCase
+    TYPE(TVariables)  :: Var
+    TYPE(TWave)       :: wave
+    TYPE(TParticle)   :: TraPar
+    TYPE(SolidObject) :: BoomCase
+    TYPE(BCBase)      :: BCp, BCu, BCv, BCVof, BCLvs
     INTEGER(kind=it4b):: Irec,Jrec,NI,NJ,iprint
     REAL(dp) :: zp,UParInlet,HParInlet,DParInlet,rop,gx,gy, Lref, Roref, Rey
     REAL(KIND=dp):: vel,Uref,Vint, ha, hw, UwInlet, UgInlet, nuref
     REAL(dp) :: t0, cw0, Amp0, Depthw, Lamdaw, twp, HChannel, LChannel, kw, omew, HDomain
+    REAL(dp), DIMENSION(:), ALLOCATABLE :: Constin
     TYPE(TsimcoMesh) :: simcomesh
     INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght, NParInlet, IParInlet
     LOGICAL :: RunAgain, ICorProb
@@ -119,7 +122,42 @@ Program Main
     call simcomesh%Initial_Grid2(Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,Lref,0)
     call simcomesh%InitialUVGrid2(Lref, Lref)
     call simcomesh%HYPRE_CreateGrid2()
-    !
+    ! Contruct the layer of boundary points
+    call BCp%Construct(Isize,Jsize)
+    call BCu%Construct(Isize,Jsize)
+    call BCv%Construct(Isize,Jsize)
+    call BCVof%Construct(Isize,Jsize)
+    call BCLvs%Construct(Isize,Jsize) 
+    ! Set up the flag for Dirichlet or Neumann boundary type.
+    ! The Boundary condition is decided by the user. 
+    call BCp%SetDN(1,0,1,1) 
+    call BCu%SetDN(0,1,0,0)
+    call BCv%SetDN(0,1,0,0)
+    call BCvof%SetDN(1,1,0,0)
+    ! Note that the Neumann boundary condition will reduce the computational time 
+    ! for computing level set function at boundary
+    call BClvs%SetDN(1,1,1,1)
+    ! Set constant for computing value at boundary
+    ! pressure
+    allocate(Constin(4))
+    Constin(:)=0.d0
+    call BCp%SetConstant(Constin)
+    deallocate(Constin)
+    allocate(Constin(11))
+    Constin(1:4) = 0.d0
+    ! Set constant for wave 
+    Constin(5) = Amp0
+    Constin(6) = Kw
+    Constin(7) = cw0
+    Constin(8) = UwInlet
+    Constin(9) = UGInlet
+    Constin(10) = HChannel
+    Constin(11) = Depthw
+    call BCu%SetConstant(Constin)
+    call BCv%SetConstant(Constin)
+    call BCVof%SetConstant(Constin)
+    call BCLvS%SetConstant(Constin)
+    deallocate(Constin)        
 !    call HYPRE_CreateGrid(PGrid)
     call Initial_Clsvof(simcomesh%PGrid,simcomesh%PCell,BoomCase, wave)
     call Initial_Clsvof(simcomesh%UGrid,simcomesh%UCell,BoomCase, wave)
@@ -132,5 +170,5 @@ Program Main
     call Print_Result_Tecplot_UCent(simcomesh%UGrid,Var,simcomesh%UCell,INT8(0))
     call Print_Result_Tecplot_VCent(simcomesh%VGrid,Var,simcomesh%VCell,INT8(0))
     call NewCellFace(simcomesh)
-    call IterationSolution(simcomesh, Var,wave, TraPar,BoomCase,50)
+    call IterationSolution(simcomesh, Var, wave, TraPar, BoomCase, BCp, BCu, BCv, BCvof, BCLvs, 50)
 end program main

@@ -30,6 +30,7 @@ target_link_libraries(testcell ${LINK_LIBS})
 my_add_test(testcell)
 list(APPEND PARTICLELIST
     ${SRC_LIST2}
+    ../BoundaryFunction.f90
     ../Particles.f90
     ../StateVariables.f90
     ../Constants.f90
@@ -40,6 +41,7 @@ target_link_libraries(testparticle ${LINK_LIBS})
 my_add_test(testparticle)
 list(APPEND PARTICLELIST2
     ${SRC_LIST2}
+    ../BoundaryFunction.f90
     ../Particles.f90
     ../StateVariables.f90
     ../Constants.f90
@@ -50,6 +52,7 @@ target_link_libraries(testparticle2 ${LINK_LIBS})
 my_add_test(testparticle2)
 list(APPEND CLSVOFTESTLIST
     ${SRC_LIST2}
+    ../BoundaryFunction.f90
     ../StateVariables.f90
     ../Constants.f90
     ../Cutcell_Mod.f90
