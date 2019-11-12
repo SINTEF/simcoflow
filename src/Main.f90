@@ -13,7 +13,7 @@
     !*******************************************************
 Program Main
     USE PrecisionVar
-    USE Mesh, ONLY : TsimcoMesh, getMeshSizes, TPoint
+    USE Mesh, ONLY : TsimcoMesh, TPoint
     USE Cutcell, ONLY : Grid_Preprocess, NewCellFace
     USE Clsvof, ONLY : SolidObject, Initial_Clsvof
     USE StateVariables, ONLY : TVariables, TWave, setSolverVariables

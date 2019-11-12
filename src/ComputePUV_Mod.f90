@@ -1,6 +1,6 @@
 Module ComputePUV
     USE PrecisionVar
-    USE Mesh, ONLY : Grid, Cell, getMeshSizes
+    USE Mesh, ONLY : Grid, Cell,ibeg, jbeg, Isize, Jsize, ight, jght
     USE Clsvof, ONLY : SolidObject
     USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : epsi, roa, row
@@ -33,8 +33,6 @@ Module ComputePUV
       REAL(KIND=dp):: dps
       REAL(KIND=dp):: BetaP,BetaM,BetaW,BetaD,Yint,Hjump,Lamda,tol
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: GradPUV
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
       allocate(Pred%u(ibeg-ight:ibeg+ight+Isize-1,jbeg-jght:jbeg+jght+Jsize-1))
       allocate(Pred%v(ibeg-ight:ibeg+ight+Isize-1,jbeg-jght:jbeg+jght+Jsize-1))
       allocate(Proj%Pp(ibeg-ight:ibeg+ight+Isize-1,jbeg-jght:jbeg+jght+Jsize-1))
@@ -231,8 +229,6 @@ Module ComputePUV
       TYPE(TVariables),INTENT(INOUT):: TVar
       TYPE(Cell),INTENT(IN):: PCell,UCell,VCell
       INTEGER(kind=it4b):: i,j
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           if(PCell%vofS(i,j)>1.d0-epsi) then
