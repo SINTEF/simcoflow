@@ -31,6 +31,8 @@ my_add_test(testcell)
 list(APPEND PARTICLELIST
     ${SRC_LIST2}
     ../BoundaryFunction.f90
+    ../BoundaryFunction2.f90
+    ../BoundaryInterface2.f90
     ../Particles.f90
     ../StateVariables.f90
     ../Constants.f90
@@ -42,6 +44,8 @@ my_add_test(testparticle)
 list(APPEND PARTICLELIST2
     ${SRC_LIST2}
     ../BoundaryFunction.f90
+    ../BoundaryFunction2.f90
+    ../BoundaryInterface2.f90
     ../Particles.f90
     ../StateVariables.f90
     ../Constants.f90
@@ -53,6 +57,8 @@ my_add_test(testparticle2)
 list(APPEND CLSVOFTESTLIST
     ${SRC_LIST2}
     ../BoundaryFunction.f90
+    ../BoundaryFunction2.f90
+    ../BoundaryInterface2.f90
     ../StateVariables.f90
     ../Constants.f90
     ../Cutcell_Mod.f90

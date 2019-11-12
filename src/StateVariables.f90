@@ -1,5 +1,6 @@
 Module StateVariables
     USE PrecisionVar
+    USE BoundaryFunction2, ONLY : BCBase2
     USE Constants, ONLY : g, epsi, roa, row
     USE Mesh, ONLY : TsimcoMesh, Grid, Cell, getMeshSizes
     USE BoundaryFunction, ONLY : BCBase, BCUW, BCUE, BCUS, BCUN, BCVW,         &
@@ -39,6 +40,7 @@ Module StateVariables
     End Interface setSolverVariables
     PUBLIC :: TWave, TVariables
     PUBLIC:: Boundary_Condition_Var
+    PUBLIC:: Boundary_Condition_Var2
     PUBLIC :: setSolverVariables, getSolverVariables
     contains
 
@@ -269,6 +271,121 @@ Module StateVariables
                 PCell%phi(:,Jsize), Time)
       Vari%p(:,Jsize+jght) = BCp%VarN(:)      
     end subroutine Boundary_Condition_Var
+
+    !*******************************************************
+    !
+    !
+    !      ________Slip Wall_______
+    ! Inlet
+    ! Air
+    !      ________________________
+    ! Inlet........................Outlet
+    ! Water........................Water
+    !      ........................
+    !      ........................
+    !      __________Slip Wall_____
+    !
+    !*******************************************************
+    subroutine Boundary_Condition_Var2(PGrid, PCell, Vari, BCp, BCu, BCv, Time)
+      TYPE(Grid), INTENT(IN)  	      :: PGrid
+      TYPE(Cell), INTENT(IN)  	      :: PCell
+      TYPE(TVariables), INTENT(INOUT) :: Vari
+      TYPE(BCBase2), INTENT(INOUT)     :: BCu, BCv, BCp  	
+      REAL(KIND=dp),INTENT(IN)        :: Time
+      INTEGER(it4b) 		      :: ibeg, jbeg, Isize, Jsize, ight, jght
+      INTEGER(kind=it4b)              :: i,j
+
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
+      ! Compute the boundary value for u-velocity.
+      ! Western boundary 
+      call BCu%west(PGrid%x(1,:)-PGrid%dx(1,:)/2.d0, PGrid%y(1,:), 	       &
+                PGrid%dx(1,:), PGrid%dy(1,:), Vari%p(1,:), Vari%u(1,:),        &
+                Vari%v(1,:), PCell%vof(1,:), PCell%phi(1,:), Time)
+      Vari%u(ibeg-ight,:) = BCu%VarW(:)
+      ! Eastern boundary
+      call BCU%east(PGrid%x(Isize,:)+PGrid%dx(Isize,:)/2.d0, PGrid%y(Isize,:),&
+                PGrid%dx(Isize,:), PGrid%dy(Isize,:), Vari%p(Isize,:),         &
+                Vari%u(Isize,:), Vari%v(Isize,:), PCell%vof(Isize,:),          &
+                PCell%phi(Isize,:), Time)            
+      Vari%u(Isize+ight,:) = BCu%VarE(:)  
+      ! Southern boundary
+      call BCU%south(PGrid%x(:,1)+PGrid%dx(:,1)/2.d0, 			       &
+  	        PGrid%y(:,1)-PGrid%dy(:,1)/2.d0, PGrid%dx(:,1),                &
+                PGrid%dy(:,1), Vari%p(:,1), Vari%u(:,1),           	       &
+                Vari%v(:,1), PCell%vof(:,1), PCell%phi(:,1), Time)
+      if(BCu%flag(3) == 0) then
+        Vari%u(:,jbeg-jght) = BCu%VarS(:)-Vari%u(:,1)    
+      else
+        Vari%u(:,jbeg-jght) = 2.d0*BCu%VarS(:)-Vari%u(:,1)  
+      end if
+      ! Northern boundary
+      call BCU%north(PGrid%x(:,Jsize)+PGrid%dx(:,Jsize)/2.d0, 		       &
+  	        PGrid%y(:,Jsize)+PGrid%dy(:,Jsize)/2.d0, PGrid%dx(:,Jsize),    &
+                PGrid%dy(:,Jsize), Vari%p(:,Jsize), Vari%u(:,Jsize),           &
+                Vari%v(:,Jsize), PCell%vof(:,Jsize), PCell%phi(:,Jsize), Time)
+      if(BCu%flag(4) == 0) then
+        Vari%u(:,Jsize+jght) = BCu%VarS(:)-Vari%u(:,Jsize)    
+      else
+        Vari%u(:,Jsize+jght) = 2.d0*BCu%VarS(:)-Vari%u(:,Jsize)  
+      end if
+      
+      ! Compute the boundary value for v-velocity
+      ! Western boundary
+      call BCV%west(PGrid%x(1,:)-PGrid%dx(1,:)/2.d0,                          &
+                PGrid%y(1,:)+PGrid%dy(1,:)/2.d0, PGrid%dx(1,:), 	       &
+                PGrid%dy(1,:), Vari%p(1,:), Vari%u(1,:),                       &
+                Vari%v(1,:), PCell%vof(1,:), PCell%phi(1,:), Time)  
+      if(BCv%flag(1) == 0) then
+        Vari%v(ibeg-ight,:) = BCv%VarW(:)-Vari%v(ibeg,:)
+      else
+        Vari%v(ibeg-ight,:) = 2.d0*BCv%VarW(:)-Vari%v(ibeg,:)
+      end if   
+      ! Eastern boundary
+      call BCV%east(PGrid%x(Isize,:)+PGrid%dx(Isize,:)/2.d0,                  &
+                PGrid%y(Isize,:)+PGrid%dy(Isize,:)/2.d0, PGrid%dx(Isize,:),    &
+                PGrid%dy(Isize,:), Vari%p(Isize,:), Vari%u(Isize,:),           &
+                Vari%v(Isize,:), PCell%vof(Isize,:), PCell%phi(Isize,:), Time)  
+      if(BCv%flag(2) == 0) then
+        Vari%v(Isize+ight,:) = BCv%VarE(:)-Vari%v(Isize,:)
+      else
+        Vari%v(Isize+ight,:) = 2.d0*BCv%VarE(:)-Vari%v(Isize,:)
+      end if
+      ! Southern boundary
+      call BCV%south(PGrid%x(:,1), PGrid%y(:,1)-PGrid%dy(:,1)/2.d0, 	       &
+                PGrid%dx(:,1), PGrid%dy(:,1), Vari%p(:,1), Vari%u(:,1),        &
+                Vari%v(:,1), PCell%vof(:,1), PCell%phi(:,1), Time)
+      Vari%v(:,jbeg-jght) = BCv%VarS(:)
+      ! Northern boundary 
+      call BCV%north(PGrid%x(:,Jsize), PGrid%y(:,Jsize)-PGrid%dy(:,Jsize)/2.d0,&
+                PGrid%dx(:,Jsize), PGrid%dy(:,Jsize), Vari%p(:,Jsize),         &
+                Vari%u(:,Jsize), Vari%v(:,Jsize), PCell%vof(:,Jsize),  	       &
+                PCell%phi(:,Jsize), Time) 
+      Vari%v(:,Jsize+jght) = BCv%VarN(:)
+      
+      ! Compute the boundary value for pressure
+      ! Western boundary  
+      call BCp%west(PGrid%x(1,:)+PGrid%dx(1,:)/2.d0, PGrid%y(1,:),            &
+                PGrid%dx(1,:), PGrid%dy(1,:), Vari%p(1,:), Vari%u(1,:),        &
+                Vari%v(1,:), PCell%vof(1,:), PCell%phi(1,:), Time)
+      Vari%p(ibeg-ight,:) = BCp%VarW(:)
+      ! Eastern boundary 
+      call BCp%east(PGrid%x(Isize,:)+PGrid%dx(Isize,:)/2.d0, PGrid%y(Isize,:),&
+                PGrid%dx(Isize,:), PGrid%dy(Isize,:), Vari%p(Isize,:),         &
+                Vari%u(Isize,:), Vari%v(Isize,:), PCell%vof(Isize,:),           &
+                PCell%phi(Isize,:), Time)
+      Vari%p(Isize+ight,:) = BCp%VarE(:)
+      ! Southern boundary
+      call BCp%south(PGrid%x(:,1), PGrid%y(:,1)-PGrid%dy(:,1)/2.d0,            &
+                PGrid%dx(:,1), PGrid%dy(:,1), Vari%p(:,1), Vari%u(:,1),        &
+                Vari%v(:,1), PCell%vof(:,1), PCell%phi(:,1), Time)
+      Vari%p(:,jbeg-jght) = BCp%VarS(:)
+      ! Northern boundary 
+      call BCp%north(PGrid%x(:,Jsize), PGrid%y(:,Jsize)-PGrid%dy(:,Jsize)/2.d0,&
+                PGrid%dx(:,Jsize), PGrid%dy(:,Jsize), Vari%p(:,Jsize),         &
+                Vari%u(:,Jsize), Vari%v(:,Jsize), PCell%vof(:,Jsize),           &
+                PCell%phi(:,Jsize), Time)
+      Vari%p(:,Jsize+jght) = BCp%VarN(:)      
+    end subroutine Boundary_Condition_Var2
 
     ! The naming scheme is not correct here, FIXME
     SUBROUTINE setSolverVariables(RunAgain_, ICorProb_, IttRun_)

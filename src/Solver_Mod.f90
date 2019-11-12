@@ -1,7 +1,7 @@
 Module Solver
     USE PrecisionVar
     USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Grid, Cell
-    USE StateVariables, ONLY : TVariables, TWave, getSolverVariables, Boundary_Condition_Var
+    USE StateVariables, ONLY : TVariables, TWave, getSolverVariables, Boundary_Condition_Var, Boundary_Condition_Var2
     USE Constants, ONLY : g, epsi
     USE CutCell, ONLY : Grid_Preprocess, NewCellFace
     USE Clsvof, ONLY : SolidObject, Coupled_LS_VOF, Initial_ClsVofUV, SolidVolumeFraction, ComputeForceObject
@@ -12,6 +12,7 @@ Module Solver
     USE MPI
     USE Particles, ONLY : TParticle
     USE BoundaryFunction, ONLY : BCBase
+    USE BoundaryFunction2, ONLY : BCBase2
     IMPLICIT NONE
     PRIVATE
     INTEGER(it8b) :: IttBegin
@@ -28,6 +29,10 @@ Module Solver
     REAL(KIND=dp),PRIVATE:: tprint(7),xprintex(0:7)
     INTEGER(kind=it4b),PRIVATE:: WavePrint
     PUBLIC:: IterationSolution
+    PUBLIC:: IterationSolution2
+    Interface IterationSolution2
+      Module Procedure IterationSolution2
+    End Interface IterationSolution2
     Interface IterationSolution
       Module Procedure IterationSolution
     End Interface IterationSolution
@@ -273,6 +278,248 @@ Module Solver
       deallocate(VolPar)
       deallocate(VolParU,VolParV)
     END SUBROUTINE AdamBasforthCrankNicolson
+
+    subroutine IterationSolution2(simcomesh, TVar, wave, TraPar, BoomCase, BCp, &
+                                 BCu, BCv, BCVof, BCLvs, iprint)
+      IMPLICIT NONE
+      TYPE(TsimcoMesh) , INTENT(inout) :: simcomesh
+      TYPE(TVariables),INTENT(INOUT):: TVar
+      TYPE(TWave), INTENT(in) :: wave
+      INTEGER(kind=it4b),INTENT(IN):: iprint
+      TYPE(BCBase2),INTENT(INOUT)   :: BCp, BCu, BCv, BCVof, BCLvs
+      TYPE(TParticle),INTENT(INOUT):: TraPar
+      TYPE(SolidObject),INTENT(INOUT):: BoomCase
+      TYPE(Cell):: PCellO,UCellO,VCellO
+      TYPE(TsimcoMesh) :: simcomesh0
+      REAL(KIND=dp),DIMENSION(:,:),allocatable:: GraP
+      REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: Flux_n1
+      TYPE(SolverTime):: Time
+      TYPE(SolverConvergence):: UConv,VConv,PConv
+      TYPE(TVariables):: TVar_n
+      INTEGER(kind=it4b):: iprint1,i,j
+      INTEGER(kind=it8b):: itt,tempvel
+      REAL(KIND=dp):: velaver,timeb
+      CHARACTER(LEN=80):: filename,curd
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      INTEGER(it8b) :: IttRun
+      LOGICAL :: RunAgain
+      CHARACTER*70 :: dir
+      call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      call getDir(dir)
+      allocate(Flux_n1(0:Isize+1,0:Jsize+1,2))
+      Flux_n1(:,:,:)=0.d0
+      allocate(GraP(1:Isize,1:Jsize))
+      Time%iter=10**6
+      Time%NondiT=0.d0
+      Time%Cfl=0.3d0
+      iprint1=iprint
+      tempvel=0
+      velaver=0.d0
+      timeb=20.d0
+    ! Set up time for pring wave profile
+   !   tprint(1)=0.50074d0
+   !   tprint(2)=0.75264d0
+   !   tprint(3)=0.8018d0
+   !   tprint(4)=0.85095d0
+   !   tprint(5)=0.89396d0
+   !   tprint(6)=1.02912d0
+   !   tprint(7)=1.20116d0
+    ! Set up time for Overtaking collisions
+      tprint(1)=2.59892d0
+      tprint(2)=3.50209d0
+      tprint(3)=4.14721d0
+      tprint(4)=4.6971d0
+      tprint(5)=5.5972d0
+      tprint(6)=6.60174d0
+      tprint(7)=8.39887d0
+    ! Set up printing position for overtaking collisions
+      xprintex(0)=0.d0
+      xprintex(1)=1.301585d0
+      xprintex(2)=1.294936d0
+      xprintex(3)=1.3711241d0 !1.462082d0 ! for lowest point between two waves
+      xprintex(4)=1.456825d0
+      xprintex(5)=1.46058d0
+      xprintex(6)=1.469767d0
+      xprintex(7)=1.495967d0
+    ! Flag to print wave profile (1 for printing)
+    ! This variables is assigned value in ComputeTimeStep Subroutine
+      WavePrint=0
+      call PrintWaterWave(Time%PhysT,simcomesh%PGrid,simcomesh%PCell)
+      simcomesh0 = TsimcoMesh(Isize, Jsize)
+    ! Calculate threshold for MUSCL limiter
+      if(RunAgain.eqv..TRUE.) then
+        Write(curd,'(i8.8)') IttRun
+        filename=trim(adjustl(dir))//'Tecplot/Pressure_'//trim(curd)//'.dat'
+        call ReadOldDataPCell(filename,simcomesh%PCell,TVar,Flux_n1)
+        filename=trim(adjustl(dir))//'Tecplot/Uvelocity_'//trim(curd)//'.dat'
+        call ReadOldDataVelocityCell(filename,simcomesh%UCell,TVar%u)
+        filename=trim(adjustl(dir))//'Tecplot/Vvelocity_'//trim(curd)//'.dat'
+        call ReadOldDataVelocityCell(filename,simcomesh%VCell,TVar%v)
+        filename=trim(adjustl(dir))//'Tecplot/Particles_'//trim(curd)//'.dat'
+        call ReadOldDataParticle(filename,TraPar,TVar, simcomesh%PGrid%Lref)
+        filename=trim(adjustl(dir))//'Convergence.dat'
+        call ReadFileConvergence(filename,Time,PConv,BoomCase)
+        BoomCase%XBar1=BoomCase%Posp%x-BoomCase%Wobj/2.d0
+        BoomCase%XBar2=BoomCase%Posp%x+BoomCase%Wobj/2.d0
+        BoomCase%LBar=1.5d0/simcomesh%PGrid%Lref
+        BoomCase%YBar=BoomCase%Posp%y-dsqrt((BoomCase%Dobj/2.d0)**2.d0-        &
+                 (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
+
+        call SolidVolumeFraction(simcomesh%PGrid,simcomesh%PCell,BoomCase)
+        call SolidVolumeFraction(simcomesh%UGrid,simcomesh%UCell,BoomCase)
+        call SolidVolumeFraction(simcomesh%VGrid,simcomesh%VCell,BoomCase)
+
+        call Grid_Preprocess(simcomesh,TVar,IttRun)
+        call NewCellFace(simcomesh)
+ !       call Boundary_Condition_Var(PGrid,TVar,Time%NondiT)
+        Time%PhysT = Time%Nondit*simcomesh%PGrid%Lref/TVar%URef
+        IttBegin=IttRun+1
+!        BoomCase%us=0.d0
+!        BoomCase%vs=0.d0
+      else
+        IttBegin=1
+      end if
+      do itt = IttBegin,Time%iter
+!        if(itt>=610) then
+!          print*,itt
+!          iprint1=1
+!        end if
+       ! if(itt==365) pause
+        call AdamBasforthCrankNicolson2(simcomesh, simcomesh0,  &
+                 wave, TVar,UConv,VConv,PConv,BCp,BCu,BCv,BCVof, BCLvs, Time,Flux_n1,TraPar, &
+                 BoomCase,itt)
+        if(mod(itt,TraPar%IParInlet)==0) then
+          call TraPar%ParticleInletCondition(simcomesh%PGrid,simcomesh%PCell,wave)
+        end if
+        call TraPar%TrackingParticles(simcomesh%PGrid,simcomesh%PCell,TVar,Time%dt,BoomCase)
+        Time%NondiT = Time%NondiT+Time%dt
+        Time%PhysT = Time%Nondit*simcomesh%PGrid%Lref/TVar%URef
+        if(itt==1) then
+          open(unit=5,file=trim(adjustl(dir))//'Convergence.dat')
+          close(5,status='delete')
+          open(unit=5,file=trim(adjustl(dir))//'WaveJetVelocity.dat')
+          close(5,status='delete')
+          open(unit=5,file=trim(adjustl(dir))//'WaterHeight.dat')
+          close(5,status='delete')
+          open(unit=5,file=trim(adjustl(dir))//'WaterPressure.dat')
+          close(5,status='delete')
+          open(unit=5,file=trim(adjustl(dir))//'ObjectForce.dat')
+          close(5,status='delete')
+        end if
+
+    !    call PrintWaterJetVelocity(Time%NonDiT,PGrid,PCell,TVar,itt,tempvel,   &
+    !                                                              velaver,timeb)
+    !    call PrintWaveFront(Time%NonDiT,PGrid,PCell)
+    !    call PrintWaterHeight(Time%NonDiT,I1,I2,I3,I4,PGrid,PCell)
+    !    call PrintWaterPressure(Time%NonDiT,J1,J2,J3,J4,TVar)
+        call PrintHistory(itt,Time,PConv,BoomCase)
+        if(mod(itt,iprint1)==0)then
+          write(*,*) itt,Time%PhysT,Time%NondiT
+          call Print_Result_Tecplot_PCent(simcomesh%PGrid,TVar,simcomesh%PCell,TraPar,Flux_n1,itt,1)
+          call Print_Result_Tecplot_UCent(simcomesh%UGrid,TVar,simcomesh%UCell,itt)
+          call Print_Result_Tecplot_VCent(simcomesh%VGrid,TVar,simcomesh%VCell,itt)
+          call Print_Result_VTK_2D(simcomesh%PGrid,TVar,simcomesh%PCell,itt)
+        end if
+        if(WavePrint/=0) then
+          call PrintWaterWave(Time%PhysT,simcomesh%PGrid,simcomesh%PCell)
+          WavePrint=0
+        end if
+      end do
+      deallocate(GraP,Flux_n1)
+    end subroutine IterationSolution2
+
+    SUBROUTINE AdamBasforthCrankNicolson2(simcomesh, simcomesh0, wave, &
+               TVar,UConv,VConv,PConv,BCp,BCu,BCv,BCVof,BCLvs,Time,Flux_n1,  &
+               TraPar,BoomCase,itt)
+      IMPLICIT NONE
+      TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
+      TYPE(TsimcoMesh), INTENT(inout) :: simcomesh0
+      TYPE(TWave), INTENT(in)         :: wave
+      TYPE(TVariables),INTENT(INOUT):: TVar
+      TYPE(SolverTime),INTENT(INOUT):: Time
+      TYPE(TParticle),INTENT(INOUT):: TraPar
+      TYPE(SolverConvergence),INTENT(OUT):: UConv,VConv,PConv
+      TYPE(BCBase2),INTENT(INOUT)   :: BCp, BCu, BCv, BCVof, BCLvs
+      TYPE(SolidObject),INTENT(INOUT):: BoomCase
+      REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(INOUT):: Flux_n1
+      INTEGER(kind=it8b),INTENT(IN):: itt
+      INTEGER(kind=it4b):: i,j
+      REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: SPar
+      REAL(KIND=dp),DIMENSION(:,:),allocatable:: SParU,SParV,VolPar,VolParU,VolParV
+      REAL(KIND=dp):: dt,Se,ForceObj
+      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
+      INTEGER(it8b) :: IttRun
+      LOGICAL :: RunAgain
+      CHARACTER*70 :: dir
+      call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
+      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
+      call getDir(dir)
+      if(itt==1) then
+        BoomCase%us=0.d0
+        BoomCase%vs=0.d0
+      end if
+      allocate(SPar(Isize,Jsize,2))
+      allocate(SParU(Isize,Jsize))
+      allocate(SParV(Isize,Jsize))
+      allocate(VolPar(Isize,Jsize))
+      allocate(VolParU(Isize,Jsize))
+      allocate(VolParV(Isize,Jsize))
+      ! First Runge-Kutta substep
+      call CopyNewCell(simcomesh0%PCell,simcomesh%PCell)
+      call CopyNewCell(simcomesh0%UCell,simcomesh%UCell)
+      call CopyNewCell(simcomesh0%VCell,simcomesh%VCell)
+      call ComputeForceObject(BoomCase,simcomesh%PGrid,simcomesh%PCell,simcomesh%VCell,TVar,ForceObj)
+   !   BoomCase%asy=-(1.14d0*omew)**2.d0*Amp0*dsin(1.14d0*omew*Time%NondiT+pi/2.d0)/    &
+   !                 (TVar%Uref**2.d0/Lref)
+      if(RunAgain.eqv..FALSE.) then
+        BoomCase%asy=(ForceObj-BoomCase%Mobj*g)/BoomCase%Mobj
+      elseif(itt>ittRun+1) then
+        BoomCase%asy=(ForceObj-BoomCase%Mobj*g)/BoomCase%Mobj
+      end if
+      BoomCase%asx=0.d0
+      if(itt<10) then
+        BoomCase%us=0.d0
+        BoomCase%vs=0.d0
+        BoomCase%asy=0.d0
+      end if
+      call ComputeTimeStep(simcomesh%UGrid,simcomesh%VGrid,TVar,BoomCase,Time)
+      open(unit=10,file=trim(adjustl(dir))//'ObjectForce.dat',access='append')
+      write(10,*)Time%NondiT,ForceObj-BoomCase%Mobj*g,BoomCase%asy,itt
+      close(10)
+      dt=time%dt
+      if(itt>1) then
+        call Coupled_LS_VOF(simcomesh%PGrid, simcomesh%PCell, simcomesh%UCell, &
+                            simcomesh%VCell, TVar, wave, BoomCase, Time%NondiT,&
+                            dt, itt)
+        call Initial_ClsVofUV(simcomesh%PCell, simcomesh%PGrid,                &
+                              simcomesh%UCell, simcomesh%UGrid, VolPar, SPar,  &
+                              VolParU, SParU, BoomCase, 0)
+        call Initial_ClsVofUV(simcomesh%PCell, simcomesh%PGrid, 			   &
+                              simcomesh%VCell, simcomesh%VGrid, VolPar, SPar,  &
+                              VolParV, SParV, BoomCase, 1)
+        call Grid_Preprocess(simcomesh, TVar, itt)
+        call NewCellFace(simcomesh)
+        call Boundary_Condition_Var2(simcomesh%PGrid, simcomesh%PCell, TVar,    &
+                                    BCp, BCu, BCv, Time%NondiT)
+        call InterNewVar(simcomesh0%PCell, simcomesh0%UCell, simcomesh0%VCell, &
+                         simcomesh%PCell, simcomesh%UCell, simcomesh%VCell,    &
+                         simcomesh%PGrid, TVar, BoomCase%vs)
+      else
+        SParU(:,:)=0.d0;SParV(:,:)=0.d0
+        VolParU(:,:)=0.d0;VolParV(:,:)=0.d0
+      end if
+      call UpdatePUV(simcomesh%UGrid, simcomesh%VGrid, simcomesh%PGrid,        &
+                     simcomesh0%PCell, simcomesh0%UCell, simcomesh0%VCell,     &
+                     simcomesh%PCell, simcomesh%UCell, simcomesh%VCell, TVar,  &
+                     Flux_n1, TraPar, VolParU, VolParV, SParU, SParV, BoomCase,&
+                     dt, itt)
+      ! Calculate the three kind of norm for convergence
+      deallocate(SPar)
+      deallocate(SParU,SParV)
+      deallocate(VolPar)
+      deallocate(VolParU,VolParV)
+    END SUBROUTINE AdamBasforthCrankNicolson2
 
     SUBROUTINE ComputeTimeStep(UGrid,VGrid,TVar,BoomCase,Time)
       IMPLICIT NONE
