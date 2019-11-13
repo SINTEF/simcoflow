@@ -16,7 +16,7 @@ Program particletest
    mesh = TsimcoMesh(10,12)
    ! Particles
    IParInlet=50
-   NParInlet=5
+   NParInlet=0
    Var = Tvariables()
    Var%p(:,:)=0.d0
    Var%u(:,:)=0.d0
@@ -27,6 +27,8 @@ Program particletest
    mesh%PCell%ny(:,:)=0.d0
    mesh%PCell%nxS(:,:)=1.d0
    mesh%PCell%nyS(:,:)=0.d0
+   mesh%PGrid%Lref=1.d0
+   Var%Uref=1.d0 
    
    point = TPoint(0.d0,0.d0)
    point2 = TPoint(10.d0,10.d0)
@@ -37,6 +39,7 @@ Program particletest
    gy=g
    
    call mesh%Initial_Grid2(point,point2,ReS,ReE,11,13,1,2,1.d0,0)
+   TraPar = TParticle(1, NParInlet, IParInlet)
    ! Intialize particle
    TraPar%np=1
    TraPar%zp  = 1.d0
@@ -47,21 +50,21 @@ Program particletest
    TraPar%Posp(TraPar%np)%x=pointp%x
    TraPar%Posp(Trapar%np)%y=pointp%y
    TraPar%uvp(TraPar%np)%u=0.d0
-   TraPar%uvp(TraPar%np)%v=0.d0
+   TraPar%uvp(TraPar%np)%v=1.d-4
    time = 0.d0
-   do i=1,100
+   do i=1,20
      dt = 0.5d0*dmin1(mesh%PGrid%dx(1,1)/(TraPar%uvp(TraPar%np)%u+1.d-30+    &
-                      dsqrt(mesh%PGrid%dx(1,1)/(gx+1.d-30))),    		     &
+                      dsqrt(mesh%PGrid%dx(1,1)/(dmax1(gx,g)+1.d-30))),       &
                       mesh%PGrid%dy(1,1)/(TraPar%uvp(TraPar%np)%v+1.d-30+    &
-                      dsqrt(mesh%PGrid%dy(1,1)/(gy+1.d-30)))) 
+                      dsqrt(mesh%PGrid%dy(1,1)/(dmax1(gy,g)+1.d-30))))
      call TraPar%TrackingParticles(mesh%PGrid,mesh%PCell,Var,dt)
      time=time+dt
    end do
    romix=(row*mesh%PCell%vof(1,1)+roa*(1.d0-mesh%PCell%vof(1,1)))
    if(romix>1.5d0*TraPar%rop) then
-     if(TraPar%Posp(TraPar%np)%x>pointp%x) call exit(1)
+     if(TraPar%Posp(TraPar%np)%y>pointp%y) call exit(0)
    else
-     if(TraPar%Posp(TraPar%np)%x<pointp%x) call exit(1)
+     if(TraPar%Posp(TraPar%np)%y<pointp%y) call exit(0)
    end if  
 END PROGRAM particletest
 

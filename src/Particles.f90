@@ -174,21 +174,30 @@ Module Particles
             if(isnan(Upo(i)).or.dabs(xyp(i)%x)>1.d10.or.dabs(axp(i))>1.d10.or.  &
                                             isnan(upn(i)).or.isnan(vpn(i))) then
               print*,i
+              print*,Cd,beta,gama
+              
+              print*,Reyp, nupp, Vrel 
+              print*, 
+              print*,axp(i),upn(i),vpn(i)
+              print*,
               print*,axp(i),dtp
               print*,(1.d0-gama)/(gama+Ca)*this%gx,3.d0*Cd/8.d0/(this%dp(i)/2.d0)/   &
                    (gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
               print*,3.d0*Cd/8.d0,(this%dp(i)/2.d0)
+              print*, '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
               print*,(gama+Ca)*(upo(i)-ug)*dsqrt((upo(i)-ug)**2.d0+(vpo(i)-vg)**2.d0)
               print*,Reyp
               print*,'What the fuck'
               print*,this%uvp(i)%u,this%uvp(i)%v
               print*,nupp
+              print*,'-----------------------------------------------------------'
               print*,PCell%vof(ii,jj)/(1.d0-PCell%vofS(ii,jj)+tol)
               print*,(1.d0-PCell%vof(ii,jj)-PCell%vofS(ii,jj))/                &
                      (1.d0-PCell%vofS(ii,jj)+tol)
               print*,Upo(i),exp(-beta*dtp),ug*(1.d0-exp(-beta*dtp))
               print*,sig,beta,(1.d0-exp(-beta*dtp))
               print*,upn(i),upo(i)
+              print*, '111111111111111111111111111111111111111111111+++++++++++++'
               print*,dudx,dvdy
               print*,beta,sig,exp(-beta*dtp)
               print*,(1.d0-gama),(gama+Ca)

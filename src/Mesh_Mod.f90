@@ -96,7 +96,6 @@ Module Mesh
         this%UCell=constructCell(ibeg-1,jbeg-1)
         this%VCell=constructCell(ibeg-1,jbeg-1)
         this%PCell=constructCell(0,0)
-
       end function construct
 
       TYPE(Cell) function constructCell(o1, o2) RESULT( this )
@@ -135,6 +134,7 @@ Module Mesh
         allocate(this%MsCe      (Isize,Jsize,2))
 
       end function constructCell
+      
       Subroutine getMeshSizes(ibege, jbege, Isizee, Jsizee, ighte, jghte)
         INTEGER(it4b), OPTIONAL,INTENT(out) :: ibege, jbege, Isizee, Jsizee, ighte, jghte
         !

@@ -13,7 +13,7 @@ Program clsvoftest
    TYPE(TWave)      :: wave
    TYPE(SolidObject):: BoomCase
    INTEGER(it4b)    :: i, j, ii, jj
-   REAL(dp)         :: dt, gx, gy, time, romix, gmix, Lw
+   REAL(dp)         :: dt, gx, gy, time, romix, gmix, Lw, dvtest
    ! Need to create a mesh first to set Isize and Jsize used all over
    mesh = TsimcoMesh(10,12)
    Var = Tvariables()
@@ -33,36 +33,29 @@ Program clsvoftest
    call mesh%Initial_Grid2(point,point2,ReS,ReE,11,13,1,2,1.d0,0)
    call mesh%InitialUVGrid2(1.d0,1.d0)
    ! Initialize clsvof for PCell, UCell, VCell 
-   Lw = 5.d0
-   do i=1,sizeof(mesh%PGrid%x(:,1))
-     do j=1,sizeof(mesh%PGrid%y(1,:))
+   Lw = 5.d0 
+   do i=1,size(mesh%PGrid%x(:,1))
+     do j=1,size(mesh%PGrid%y(1,:))
        mesh%PCell%vofS(i,j)=0.d0
        mesh%PCell%phiS(i,j)=1.d4
        mesh%PCell%nxS(i,j)=1.d0
        mesh%PCell%nyS(i,j)=0.d0
        
        mesh%PCell%phi(i,j)=mesh%PGrid%y(i,j)-Lw
-       if(mesh%PCell%phi(i,j)<Lw) then
-         mesh%PCell%ny(i,j)=1.d0
-       else
-         mesh%PCell%ny(i,j)=-1.d0
-       end if
+       
+       mesh%PCell%ny(i,j)=1.d0
        mesh%PCell%nx(i,j)=0.d0
        call frac(mesh%PCell%nx(i,j),mesh%PCell%ny(i,j),mesh%PCell%phi(i,j),    &
                  mesh%PGrid%dx(i,j),mesh%PGrid%dy(i,j),mesh%PCell%vof(i,j))
-
        mesh%UCell%vofS(i,j)=0.d0
        mesh%UCell%phiS(i,j)=1.d4
        mesh%UCell%nxS(i,j)=1.d0
        mesh%UCell%nyS(i,j)=0.d0
        
        mesh%UCell%phi(i,j)=mesh%UGrid%y(i,j)-Lw
-       if(mesh%UCell%phi(i,j)<Lw) then
-         mesh%UCell%ny(i,j)=1.d0
-       else
-         mesh%UCell%ny(i,j)=-1.d0
-       end if
+       mesh%UCell%ny(i,j)=1.d0
        mesh%UCell%nx(i,j)=0.d0
+
        call frac(mesh%UCell%nx(i,j),mesh%UCell%ny(i,j),mesh%UCell%phi(i,j),    &
                  mesh%UGrid%dx(i,j),mesh%UGrid%dy(i,j),mesh%UCell%vof(i,j))
 
@@ -72,16 +65,13 @@ Program clsvoftest
        mesh%VCell%nyS(i,j)=0.d0
        
        mesh%VCell%phi(i,j)=mesh%VGrid%y(i,j)-Lw
-       if(mesh%VCell%phi(i,j)<Lw) then
-         mesh%VCell%ny(i,j)=1.d0
-       else
-         mesh%VCell%ny(i,j)=-1.d0
-       end if
+       mesh%VCell%ny(i,j)=1.d0
        mesh%VCell%nx(i,j)=0.d0
        call frac(mesh%VCell%nx(i,j),mesh%VCell%ny(i,j),mesh%VCell%phi(i,j),    &
                  mesh%VGrid%dx(i,j),mesh%VGrid%dy(i,j),mesh%VCell%vof(i,j))
      end do
    end do
+ !  print*, '--------------------------------------------------------------------'
    ! Initialize the boom 
    BoomCase%Posp%x=5000.d0
    BoomCase%Posp%y=1000.d0
@@ -105,5 +95,14 @@ Program clsvoftest
                                                BoomCase,time,dt,INT8(i))
      time=time+dt
    end do
+   dvtest = Var%v(1,1)*time
+   do i=1,size(mesh%PGrid%y(1,:))-1 
+     if(mesh%PGrid%y(1,i)<=dvtest+Lw.and.mesh%PGrid%y(1,i+1)>=dvtest+Lw) then
+       ii = i
+     end if
+   end do
+   if(ii>1) then
+     if(mesh%PCell%vof(1,ii-1)>0.d0) call exit(0)
+   end if
 END PROGRAM clsvoftest
 
