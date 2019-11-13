@@ -1,6 +1,6 @@
 Module Solver
     USE PrecisionVar
-    USE Mesh, ONLY : TsimcoMesh, getMeshSizes, Grid, Cell
+    USE Mesh, ONLY : TsimcoMesh, ibeg, jbeg, Isize, Jsize, Grid, Cell
     USE StateVariables, ONLY : TVariables, TWave, getSolverVariables, Boundary_Condition_Var, Boundary_Condition_Var2
     USE Constants, ONLY : g, epsi
     USE CutCell, ONLY : Grid_Preprocess, NewCellFace
@@ -58,12 +58,10 @@ Module Solver
       INTEGER(kind=it8b):: itt,tempvel
       REAL(KIND=dp):: velaver,timeb
       CHARACTER(LEN=80):: filename,curd
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       INTEGER(it8b) :: IttRun
       LOGICAL :: RunAgain
       CHARACTER*70 :: dir
       call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call getDir(dir)
       allocate(Flux_n1(0:Isize+1,0:Jsize+1,2))
       Flux_n1(:,:,:)=0.d0
@@ -206,12 +204,10 @@ Module Solver
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: SPar
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: SParU,SParV,VolPar,VolParU,VolParV
       REAL(KIND=dp):: dt,Se,ForceObj
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       INTEGER(it8b) :: IttRun
       LOGICAL :: RunAgain
       CHARACTER*70 :: dir
       call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call getDir(dir)
       if(itt==1) then
         BoomCase%us=0.d0
@@ -300,12 +296,10 @@ Module Solver
       INTEGER(kind=it8b):: itt,tempvel
       REAL(KIND=dp):: velaver,timeb
       CHARACTER(LEN=80):: filename,curd
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       INTEGER(it8b) :: IttRun
       LOGICAL :: RunAgain
       CHARACTER*70 :: dir
       call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call getDir(dir)
       allocate(Flux_n1(0:Isize+1,0:Jsize+1,2))
       Flux_n1(:,:,:)=0.d0
@@ -448,12 +442,10 @@ Module Solver
       REAL(KIND=dp),DIMENSION(:,:,:),allocatable:: SPar
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: SParU,SParV,VolPar,VolParU,VolParV
       REAL(KIND=dp):: dt,Se,ForceObj
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       INTEGER(it8b) :: IttRun
       LOGICAL :: RunAgain
       CHARACTER*70 :: dir
       call getSolverVariables(IttRun_=IttRun, RunAgain_=RunAgain)
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call getDir(dir)
       if(itt==1) then
         BoomCase%us=0.d0
@@ -528,8 +520,6 @@ Module Solver
       TYPE(SolidObject),INTENT(IN):: BoomCase
       TYPE(SolverTime),INTENT(OUT):: Time
       INTEGER(kind=it4b):: i,j
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       Time%dt = 1.d0
       do j = jbeg,jbeg+Jsize-1
         do i = ibeg,ibeg+Isize-1
@@ -572,8 +562,6 @@ Module Solver
        REAL(KIND=dp),intent(in):: vb
        INTEGER(KIND=it4b):: i,j,ii,jj,temp
        REAL(KIND=dp):: Pu,Pv,SumP,vfa,uleft,uright,vbot,vtop
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        do i = ibeg,ibeg+Isize-1
          do j = jbeg,jbeg+Jsize-1
            ! For pressure cell
@@ -731,10 +719,8 @@ Module Solver
       TYPE(Cell),INTENT(IN):: PCell
       INTEGER(kind=it4b):: j
       REAL(KIND=dp):: H1,H2,H3,H4
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       CHARACTER*70 :: dir
       call getDir(dir)
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do j = 1,Jsize
         if(PCell%vof(I1,j)>epsi.and.PCell%vof(I1,j)<1.d0-epsi) then
           H1 = PGrid%y(I1,j)+(PCell%vof(I1,j)-0.5d0)*PGrid%dy(I1,j)
@@ -762,9 +748,7 @@ Module Solver
       INTEGER(kind=it4b):: i,j
       character(len=250):: curd
       REAL(KIND=dp):: VolPrint,XPrint,HPrint,tol,Hmax
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       CHARACTER*70 :: dir
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call getDir(dir)
 
       tol=1.d-24
@@ -801,9 +785,7 @@ Module Solver
       INTEGER(kind=it4b),INTENT(IN):: J1,J2,J3,J4
       TYPE(TVariables),INTENT(IN):: Var
       REAL(KIND=dp):: P1,P2,P3,P4
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
       CHARACTER*70 :: dir
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call getDir(dir)
       P1=Var%p(Isize,J1)
       P2=Var%p(Isize,J2)
@@ -820,8 +802,6 @@ Module Solver
       TYPE(Cell),INTENT(IN):: TCellTa
       TYPE(Cell),INTENT(INOUT):: TCellCo
       INTEGER(kind=it4b):: i,j
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           TCellCo%vof(i,j)=TCellTa%vof(i,j)

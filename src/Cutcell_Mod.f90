@@ -1,6 +1,6 @@
 Module Cutcell
     USE PrecisionVar
-    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, getMeshSizes
+    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, ibeg, jbeg, Isize, Jsize
     USE StateVariables, ONLY : TVariables, getSolverVariables
     USE Constants, ONLY : epsi, epsiF
     IMPLICIT NONE
@@ -22,8 +22,6 @@ Module Cutcell
         TYPE(TVariables),INTENT(IN):: TVar
         INTEGER(kind=it8b),INTENT(IN):: itt
         INTEGER(kind=it4b):: i,j
-        INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
         call Cell_Geo_Cal(simcomesh%PGrid,simcomesh%PCell, ibeg, jbeg, Isize, Jsize)
         call Cell_Geo_Cal(simcomesh%UGrid,simcomesh%UCell, ibeg, jbeg, Isize, Jsize)
         call Cell_Geo_Cal(simcomesh%VGrid,simcomesh%VCell, ibeg, jbeg, Isize, Jsize)
@@ -409,7 +407,7 @@ Module Cutcell
         TYPE(TsimcoMesh), INTENT(inout) :: simcomesh
 !        TYPE(Cell) :: PCell,UCell,VCell
 !        TYPE(Grid) :: PGrid,UGrid,VGrid
-        INTEGER(kind=it4b):: i,j,k,ii,jj,temp, ibeg, jbeg, Isize, Jsize
+        INTEGER(kind=it4b):: i,j,k,ii,jj,temp
         REAL(KIND=dp):: MaxFace
         INTEGER(kind=it4b),PARAMETER:: nx=5,ny=5
         REAL(KIND=dp):: dxx,dyy,xx,yy,dd,Cdis,vol,delh,Sx,Sy
@@ -425,7 +423,6 @@ Module Cutcell
 !        Pgrid = simcomesh % Pgrid
 !        Ugrid = simcomesh % Ugrid
 !        Vgrid = simcomesh % Vgrid
-        call getMeshSizes(ibeg, jbeg, Isize, Jsize)
 
         !
      !   dxx = simcomesh%Pgrid%delx/dble(nx)

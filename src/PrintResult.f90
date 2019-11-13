@@ -1,6 +1,6 @@
 Module PrintResult
     USE PrecisionVar
-    USE Mesh, ONLY : Grid, Cell, getMeshSizes
+    USE Mesh, ONLY : Grid, Cell, ibeg, jbeg, Isize, Jsize
     USE StateVariables, ONLY : TVariables
     USE Constants, ONLY : pi, Ktw, roa, row
     USE VTR, ONLY : VTR_file_handle, VTR_open_file, VTR_write_var, VTR_write_mesh, VTR_close_file
@@ -52,8 +52,6 @@ Module PrintResult
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: p
       Character(15):: curd
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       Allocate(p(ibeg:ibeg+Isize-1,jbeg:jbeg+Jsize-1))
       Do i = ibeg,ibeg+Isize-1
         Do j = jbeg,jbeg+Jsize-1
@@ -124,8 +122,6 @@ Module PrintResult
       INTEGER(kind=it8b),INTENT(IN):: itt
       INTEGER(kind=it4b) i,j
       Character(15) curd
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       Write(curd,'(i8.8)') itt
       Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//                         &
                     'Uvelocity_'//trim(curd)//'.dat',action='write')
@@ -152,8 +148,6 @@ Module PrintResult
       INTEGER(kind=it8b),INTENT(IN):: itt
       INTEGER(kind=it4b) i,j
       Character(15) curd
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       Write(curd,'(i8.8)') itt
       Open(unit=5,file=trim(adjustl(dir))//'Tecplot/'//                        &
                   'Vvelocity_'//trim(curd)//'.dat',action='write')
@@ -179,8 +173,6 @@ Module PrintResult
       TYPE(Cell),INTENT(IN):: TCell
       INTEGER(kind=it8b),INTENT(IN):: itt
       TYPE(VTR_file_handle):: fd
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       call VTR_open_file(Prefix="FlowField",dir=dir, itera=itt,FD=fd)
     ! use keyword argument due to huge number of optional dummy argument
     ! so we need keyword argument to specify the location of actual argument
@@ -209,8 +201,6 @@ Module PrintResult
       REAL(KIND=dp),INTENT(INOUT),DIMENSION(:,:,:),ALLOCATABLE:: FluxP
       INTEGER(KIND=it4b):: i,j
       REAL(KIND=dp),DIMENSION(:,:),ALLOCATABLE:: VarRead
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(VarRead(Isize,Jsize))
       open(unit=5,file=filename,action='read')
       read(5,*)
@@ -242,8 +232,6 @@ Module PrintResult
       TYPE(Cell),INTENT(INOUT)                              :: TCell
       INTEGER(KIND=it4b)                                    :: i,j
       REAL(KIND=dp),DIMENSION(:,:),ALLOCATABLE              :: VarRead
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(VarRead(Isize,Jsize))
       open(unit=5,file=filename,action='read')
       read(5,*)

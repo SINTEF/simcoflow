@@ -1,7 +1,7 @@
 Module Particles
   USE PrecisionVar
   USE MPI
-  USE Mesh, ONLY : TPoint, Grid, Cell, getMeshSizes
+  USE Mesh, ONLY : TPoint, Grid, Cell, ibeg, jbeg, Isize, Jsize, ight, jght
   USE StateVariables, ONLY : TVariables, TWave
   USE Constants, ONLY : pi, epsi, nua, nuw, roa, row
   USE Clsvof,ONLY: vofeps,SolidObject
@@ -69,8 +69,6 @@ Module Particles
     INTEGER:: i
     REAL(KIND=dp):: DragFC
     REAL(KIND=dp),DIMENSION(:),allocatable:: ranum
-    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-    call getMeshSizes(ibeg, jbeg, Isize, Jsize)
     allocate(ranum(this%np))
     call Random_Number(ranum)
     DragFC=18.d0
@@ -115,8 +113,6 @@ Module Particles
     TYPE(TPoint),DIMENSION(:),allocatable:: xyp
     REAL(KIND=dp):: dudx,dvdy,ug,vg,ug0,vg0,VRel,Reyp,Cd
     REAL(KIND=dp):: tp,FXT,EXPT,Spx,Spy,dtp,gama,nupp,ropp,beta,sig
-    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-    call getMeshSizes(ibeg, jbeg, Isize, Jsize)
     allocate(Upo(this%np))
     allocate(Vpo(this%np))
     allocate(Upn(this%np))
@@ -271,8 +267,6 @@ Module Particles
     TYPE(Grid),INTENT(IN)::TGrid
     INTEGER(kind=it4b),INTENT(OUT):: ii,jj
     INTEGER(kind=it4b):: i,j
-    INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
-    call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
     ii=-1
     do i=1,Isize
       if(Posi%x/TGrid%Lref>=TGrid%x(i,1)-TGrid%dx(i,1)/2.d0.and.               &

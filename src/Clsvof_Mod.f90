@@ -1,6 +1,6 @@
 Module Clsvof
     USE PrecisionVar
-    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, getMeshSizes
+    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, ight, jght, ibeg, jbeg, Isize, Jsize
     USE StateVariables, ONLY : TVariables, TWave, getSolverVariables
     USE Constants, ONLY : epsi, epsiF
     use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
@@ -47,8 +47,6 @@ Module Clsvof
       REAL(KIND=dp),DIMENSION(:,:):: node(6,2),CutP(2,2),dpt(4)
       INTEGER(kind=it4b):: temp,templ,k
       REAL(KIND=dp):: epsil,nxx,nyy,nxy,vos,CylBar
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(nx(Isize,Jsize))
       allocate(ny(Isize,Jsize))
    !  for wave only
@@ -415,8 +413,6 @@ Module Clsvof
        INTEGER(kind=it4b):: i,j
        REAL(KIND=dp):: posi(4),valu(4),PosTar,temn,tol
        REAL(KIND=dp):: volfl,volfr,volsl,volsr,phifl,phifr,phisl,phisr
-       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        tol = 1.d-14
        call SolidVolumeFraction(TGrid,TCell,BoomCase)
        if(uv==0) then
@@ -749,9 +745,7 @@ Module Clsvof
        REAL(KIND=dp):: weight(9),sumvol,sumweight,sumweight2,neighvol,voldif
        REAL(KIND=dp):: SumAllVolBig,SumAllVolSmall,ResVol
        REAL(KIND=dp):: del_x,del_y,dttol,vb
-       INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
        
-       call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        Vset(1,1)=0.d0;Vset(1,2)=-1.d0
        Vset(2,1)=0.d0;Vset(1,2)=1.d0
        Vset(3,1)=-1.d0;Vset(3,2)=0.d0
@@ -973,8 +967,6 @@ Module Clsvof
       IMPLICIT NONE
       REAL(KIND=dp),DIMENSION(:,:)::vari
       INTEGER(kind=it4b):: i,j
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = 1,ISize
         vari(i,1) = vari(i,2)
         vari(i,JSize) = vari(i,JSize-1)
@@ -989,8 +981,6 @@ Module Clsvof
        IMPLICIT NONE
        REAL(KIND=dp),DIMENSION(:,:),INTENT(INOUT)::vari
        INTEGER:: i,j
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        do i = 1,ISize
          vari(i,1)=dmin1(vari(i,2)+vfls(i,1),1.d0)-vfls(i,1)
          vari(i,JSize)=dmin1(vari(i,JSize-1)+vfls(i,Jsize),1.d0)-vfls(i,Jsize)
@@ -1015,8 +1005,6 @@ Module Clsvof
        REAL(KIND=dp),DIMENSION(:,:),allocatable              :: temvf,temls
        INTEGER(kind=it4b)                                    :: i,j
        REAL(KIND=dp)                                         :: flux,lsr,etau,ul1,xwu
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        call Interface_Reconstruct(PGrid,nx,ny,dis,UpdateNorVec)
        flux = 0.d0
      ! volume of fluid
@@ -1154,8 +1142,6 @@ Module Clsvof
        REAL(KIND=dp),DIMENSION(:,:),allocatable:: temvf,temls
        INTEGER(kind=it4b):: i,j
        REAL(KIND=dp):: flux,lst
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
        call Interface_Reconstruct(PGrid,nx,ny,dis,UpdateNorVec)
        flux = 0.d0
        ! volume of fluid
@@ -1274,8 +1260,6 @@ Module Clsvof
       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(INOUT)::nx,ny,dis
       REAL(KIND=dp):: nxx,nyy,diss,temp
       INTEGER:: i,j,flag
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = 1,ISize
         do j = 1,JSize
           flag=0
@@ -1554,8 +1538,6 @@ Module Clsvof
       logical:: pointp
       REAL(KIND=dp),DIMENSION(:,:),allocatable:: phiaux
       INTEGER,DIMENSION(:,:),allocatable:: fix
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(fix(Isize,Jsize))
       allocate(phiaux(Isize,Jsize))
       fix(:,:)=0
@@ -1742,8 +1724,6 @@ Module Clsvof
       INTEGER:: dx,dy,Imv,ii
       real(dp):: qi(-1:1),qj(-1:1),nuy
       real(dp):: vx,vy,vx1,vx2,vy1,vy2,qv1,qv2,V1(2),V2(2),MaxVect,CosPar
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       nuy = eta/8.d0
        ! define qi for Dx
       if(vfls(i,j)>=epsi) then
@@ -2294,8 +2274,6 @@ Module Clsvof
       REAL(KIND=dp),DIMENSION(:,:):: node(6,2),CutP(2,2),dpt(4)
       REAL(KIND=dp):: fx,dfx,nxx,nyy,dis,nxy,dx2,dy2,tol,vol,vos
       INTEGER(kind=it4b):: j,k,temp,templ
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do j=1,Jsize
         temp=1
         templ=1
@@ -2443,7 +2421,7 @@ Module Clsvof
       REAL(KIND=dp)                  :: Clp,Clf,eta,Area,Pr,Pres,Strf,nyfp,    &
                                         testArea,Maxforce,MaxP,MaxA,Maxny,     &
                                         Areatemp,SForce
-      INTEGER(KIND=it4b)             :: i,j,ii,jj,temp, ibeg, jbeg, Isize, Jsize
+      INTEGER(KIND=it4b)             :: i,j,ii,jj,temp
       LOGICAL :: ICorProb
       Pr = 0.d0
       Clp = 0.d0
@@ -2452,7 +2430,6 @@ Module Clsvof
       Maxforce=0.d0
     ! Calculate the Cdp
     ! For upper half of cylinder
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,ibeg+Isize-1
         do j = jbeg,jbeg+Jsize-1
           if(PCell%vofS(i,j)<1.d0-epsi.and.PCell%vofS(i,j)>epsi) then
@@ -2602,8 +2579,6 @@ Module Clsvof
       REAL(KIND=dp),DIMENSION(:,:),ALLOCATABLE:: nxx,nyy,VofsOld
       REAL(KIND=dp)                           :: dx1,dy1,dx2,dy2,epsil,dr1,dr2,&
                                                  nxx1,nyy1,nxy,CylBar
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       allocate(nxx(Isize,Jsize))
       allocate(nyy(Isize,Jsize))
       allocate(VofsOld(Isize,Jsize))

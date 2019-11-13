@@ -2,7 +2,8 @@ Module StateVariables
     USE PrecisionVar
     USE BoundaryFunction2, ONLY : BCBase2
     USE Constants, ONLY : g, epsi, roa, row
-    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, getMeshSizes
+    USE Mesh, ONLY : TsimcoMesh, Grid, Cell, Isize, Jsize, ibeg, &
+         &           jbeg, ight, jght
     USE BoundaryFunction, ONLY : BCBase, BCUW, BCUE, BCUS, BCUN, BCVW,         &
                                  BCVE, BCVS, BCVN, BCPW, BCPE, BCPS, BCPN
     IMPLICIT NONE
@@ -46,8 +47,6 @@ Module StateVariables
 
     TYPE(TVariables) function constructVar() result( this )
       !
-      INTEGER(it4b) :: ibeg, jbeg, Isize, Jsize, ight, jght
-      call getMeshSizes(ibeg, jbeg, Isizee=Isize, Jsizee=Jsize, ighte=ight, jghte=jght)
       allocate(this%u(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
       allocate(this%v(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
       allocate(this%p(ibeg-ight:Isize-ibeg+ight+1,jbeg-jght:Jsize-jbeg+jght+1))
@@ -69,7 +68,7 @@ Module StateVariables
       REAL(dp),  INTENT(in) :: UwInlet, UgInlet
       TYPE(Cell),INTENT(IN):: PCell
       TYPE(Grid),INTENT(IN):: PGrid
-      INTEGER(kind=it4b):: i,j, ibeg, jbeg, Isize, Jsize
+      INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: Hwt0,xu0,Amp,cw,tw,delta,xwu,xwv,ywu,ywv
       this%Uint = Uint
       this%Vint = Vint
@@ -82,7 +81,6 @@ Module StateVariables
       this%nuref = nuref
       this%UwInlet = UwInlet
       this%UgInlet = UgInlet
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize)
       do i = ibeg,Isize+ibeg-1
         do j = jbeg,Jsize+jbeg-1
         ! for sinusoidal wave
@@ -177,10 +175,8 @@ Module StateVariables
       TYPE(TVariables), INTENT(INOUT) :: Vari
       TYPE(BCBase), INTENT(INOUT)     :: BCu, BCv, BCp  	
       REAL(KIND=dp),INTENT(IN)        :: Time
-      INTEGER(it4b) 		      :: ibeg, jbeg, Isize, Jsize, ight, jght
       INTEGER(kind=it4b)              :: i,j
 
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
       ! Compute the boundary value for u-velocity.
       ! Western boundary 
       call BCUW(BCu, PGrid%x(1,:)-PGrid%dx(1,:)/2.d0, PGrid%y(1,:), 	       &
@@ -292,10 +288,8 @@ Module StateVariables
       TYPE(TVariables), INTENT(INOUT) :: Vari
       TYPE(BCBase2), INTENT(INOUT)     :: BCu, BCv, BCp  	
       REAL(KIND=dp),INTENT(IN)        :: Time
-      INTEGER(it4b) 		      :: ibeg, jbeg, Isize, Jsize, ight, jght
       INTEGER(kind=it4b)              :: i,j
 
-      call getMeshSizes(ibeg, jbeg, Isize, Jsize, ight, jght)
       ! Compute the boundary value for u-velocity.
       ! Western boundary 
       call BCu%west(PGrid%x(1,:)-PGrid%dx(1,:)/2.d0, PGrid%y(1,:), 	       &

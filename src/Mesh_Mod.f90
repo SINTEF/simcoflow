@@ -1,11 +1,12 @@
+
 Module Mesh
     USE PrecisionVar
     USE MPI
     IMPLICIT NONE
     PRIVATE
-    INTEGER(kind=it4b),PRIVATE :: ight=1,jght=1
-    INTEGER(kind=it4b),PRIVATE :: ibeg=1,jbeg=1
-    INTEGER(kind=it4b),PRIVATE :: Isize,Jsize
+    INTEGER(kind=it4b),PUBLIC, PROTECTED :: ight=1,jght=1
+    INTEGER(kind=it4b),PUBLIC, PROTECTED :: ibeg=1,jbeg=1
+    INTEGER(kind=it4b),PUBLIC, PROTECTED :: Isize,Jsize
 
     TYPE :: TPoint
       REAL(KIND=dp)::x,y
@@ -58,10 +59,6 @@ Module Mesh
 
     END TYPE TsimcoMesh
 
-    Interface getMeshSizes
-       Module procedure getMeshSizes
-    End interface
-
     Interface TsimcoMesh
        Module procedure construct
     End interface
@@ -69,7 +66,7 @@ Module Mesh
     Interface TPoint
        Module procedure construct_point
     End interface
-    PUBLIC :: getMeshSizes, TPoint
+    PUBLIC :: TPoint
     Contains
 
       !Assume ibeg and jbeg are constant equal 1 for now
@@ -134,17 +131,6 @@ Module Mesh
         allocate(this%MsCe      (Isize,Jsize,2))
 
       end function constructCell
-      
-      Subroutine getMeshSizes(ibege, jbege, Isizee, Jsizee, ighte, jghte)
-        INTEGER(it4b), OPTIONAL,INTENT(out) :: ibege, jbege, Isizee, Jsizee, ighte, jghte
-        !
-        IF(PRESENT(ibege))  ibege  = ibeg
-        IF(PRESENT(jbege))  jbege  = jbeg
-        IF(PRESENT(Isizee)) Isizee = Isize
-        IF(PRESENT(Jsizee)) Jsizee = Jsize
-        IF(PRESENT(ighte))  ighte  = ight
-        IF(PRESENT(jghte))  jghte  = jght
-      end Subroutine getMeshSizes
 
       Subroutine Initial_Grid2(this, Start_Point,End_Point,ReS,ReE,NI,NJ,Irec,Jrec,   &
                                                      Lref,NonUniformMesh)
