@@ -1,4 +1,20 @@
 Module Clsvof
+ !! Description:
+ !! The module solves the coupled level set and volume of fluid method. 
+ !! Method:
+ !! The interface tracking method is used to solve volume of fluid. 
+ !! The level set function is used to compute the normal vector which give a better
+ !! accuracy than using volume fraction. When the new position of interface is 
+ !! determined the redistance for level set will be applied.
+ ! Current Code Owner: SIMCOFlow
+ ! Code Description:
+ ! Language: Fortran 90.
+ ! Software Standards: "European Standards for Writing and
+ ! Documenting Exchangeable Fortran 90 Code".
+ !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ ! Author : Son Tung Dang
+ !        : NTNU,SINTEF
+ ! Date : 20.09.2019
     USE PrecisionVar
     USE Mesh, ONLY : TsimcoMesh, Grid, Cell, TPoint, ight, jght, ibeg, jbeg, Isize, Jsize
     USE StateVariables, ONLY : TVariables, TWave, getSolverVariables
@@ -6,18 +22,52 @@ Module Clsvof
     use, intrinsic:: iso_fortran_env, only: stdin=>input_unit
     IMPLICIT NONE
     PRIVATE
-    INTEGER,PARAMETER:: band_width = 4,nv = 10,nl = 5
-    REAL(KIND=dp),PUBLIC,PARAMETER:: vofeps=1.d-14,tolp=1.d-10,TolDeno=1.d-24
+    INTEGER,PARAMETER:: band_width = 4
+      !! The number of layer from the interface for recomputing the level set function 
+    REAL(KIND=dp),PUBLIC,PARAMETER:: vofeps=1.d-14
+      !! The tolerant value for volume of fluid
+    REAL(KIND=dp),PUBLIC,PARAMETER:: tolp=1.d-10
+      !! The tolerant value for boom case position
+    REAL(KIND=dp),PUBLIC,PARAMETER:: TolDeno=1.d-24
+      !! The tolerant value for denominator 
     TYPE,PUBLIC:: SolidObject
-      TYPE(TPoint):: Posp,PospO
-      REAL(KIND=dp):: us,vs,asx,asy
-      REAL(KIND=dp):: Dobj,Wobj,Mobj
-      REAL(KIND=dp):: Xbar1,Xbar2,Ybar,Lbar
+      TYPE(Point):: Posp
+        !! The object position
+      TYPE(Point):: PospO
+        !! The object previous position
+      REAL(KIND=dp):: us,vs
+        !! The object velocity
+      REAL(KIND=dp):: asx,asy
+        !! The object acceleration
+      REAL(KIND=dp):: Dobj
+        !! The Boom diameter
+      REAL(KIND=dp):: Wobj
+        !! The Boom width
+      REAL(KIND=dp):: Mobj
+        !! The Boom Weight
+      REAL(KIND=dp):: Xbar1
+        !! The x position bottom left corner of boom 
+      REAL(KIND=dp):: Xbar2
+        !! The x position bottom right corner of boom
+      REAL(KIND=dp):: Ybar
+        !! The y position bottom of boom
+      REAL(KIND=dp):: Lbar
+        !! The length of boom tail
     END TYPE
-    REAL(KIND=dp),DIMENSION(:,:),pointer:: vfl,vflS,nxs,nys
-    REAL(KIND=dp),DIMENSION(:,:),pointer:: phi,phiS
+    REAL(KIND=dp),DIMENSION(:,:),pointer:: vfl
+      !! The pointer for liquid volume fraction   
+    REAL(KIND=dp),DIMENSION(:,:),pointer:: vflS
+      !! The pointer for solid volume fraction   
+    REAL(KIND=dp),DIMENSION(:,:),pointer:: nxs,nys
+      !! The normal vector for solid interface   
+    REAL(KIND=dp),DIMENSION(:,:),pointer:: phi
+      !! The pointer for liquid level set  
+    REAL(KIND=dp),DIMENSION(:,:),pointer:: phiS
+      !! The pointer for solid level set  
     REAL(KIND=dp),DIMENSION(:,:),allocatable:: nx,ny
+      !! The pointer for liquid interface   
     REAL(KIND=dp),DIMENSION(8,2):: Vset
+      !! The vector setup for normal computation   
     PUBLIC:: Initial_Clsvof,Initial_ClsvofUV,Coupled_LS_VOF,ComputeForceObject,&
              SolidVolumeFraction,frac
     Interface Initial_Clsvof
@@ -37,19 +87,29 @@ Module Clsvof
     End interface
     Contains
     SUBROUTINE Initial_Clsvof(TGrid,TCell,BoomCase, wave)
+      !! The subroutine computes the initial condition for volume of fluid and 
+      !! level set function in the pressure cell. For computing the liquid  
+      !! volume fraction, the intersections between free surface and cell 
+      !! edge will be determined first. Then a special method will be 
+      !! used to compute the area. 
       TYPE(Grid),INTENT(IN):: TGrid
+      !! The grid 
       TYPE(Cell),INTENT(INOUT),target:: TCell
+      !! The cell which contains level set, volume of fluid and normal vector 	   
       TYPE(SolidObject),INTENT(IN):: BoomCase
+      !! The Boom position
       TYPE(TWave), INTENT(in)     :: wave
+      !! Wave information 		
       INTEGER(kind=it4b):: i,j
       REAL(KIND=dp):: dx,dy,dis,vol
       REAL(KIND=dp):: dx2,dy2,tol,fx,dfx
-      REAL(KIND=dp),DIMENSION(:,:):: node(6,2),CutP(2,2),dpt(4)
+      REAL(KIND=dp),DIMENSION(:,:):: node(6,2),CutP(2,2),dpt(4) 
+        ! Information needed for computing the liquid volume fraction 
       INTEGER(kind=it4b):: temp,templ,k
       REAL(KIND=dp):: epsil,nxx,nyy,nxy,vos,CylBar
       allocate(nx(Isize,Jsize))
       allocate(ny(Isize,Jsize))
-   !  for wave only
+        ! For wave only
       vfl => TCell%vof
       phi => TCell%phi
       phiS => TCell%phiS
@@ -81,6 +141,8 @@ Module Clsvof
           node(temp,2)=-dy2
           temp=temp+1
           end if
+          ! The condition to check whether the interface will intersect with 
+          ! cell edges. 
           if(dpt(1)*dpt(2)<0.d0) then
             node(temp,1)=TGrid%x(i,j)-dx2+TGrid%dx(i,j)*dabs(dpt(2))/          &
                                           (dabs(dpt(2))+dabs(dpt(1)))
@@ -151,10 +213,14 @@ Module Clsvof
           node(temp,1)=node(1,1)
           node(temp,2)=node(1,2)
           vol=0.d0
+          ! Using the Green theorem to compute the fluid volume inside cell.
+          ! node is all points belong to gas field 
           do k=1,temp-1
             vol=vol+0.5d0*(node(k,1)*node(k+1,2)-node(k+1,1)*node(k,2))
           end do
+          ! Liquid volume fraction  
           vol=1.d0-dabs(vol/(TGrid%dx(i,j)*TGrid%dy(i,j)))
+          ! The condition when the interface will pass a cell corner 
           if(templ==3) then
             nxx=CutP(2,2)-CutP(1,2)
             nyy=CutP(2,1)-CutP(1,1)
@@ -400,16 +466,23 @@ Module Clsvof
       deallocate(ny)
     end subroutine Initial_Clsvof
 
-    subroutine Initial_ClsVofUV(PCell,PGrid,TCell,TGrid,VPp,SPp,VPuv,SPuv,     &
-                                                                    BoomCase,uv)
+    subroutine Initial_ClsVofUV(PCell,PGrid,TCell,TGrid,BoomCase,uv)
+      !! The subroutine computes the initial condition for volume of fluid and 
+      !! level set function in velocity cells. The liquid volume fraction in the 
+      !! velocity cell is the combination of two half parts of two connecting pressure cells.
        IMPLICIT NONE
        TYPE(Cell),INTENT(IN):: PCell
+         !! The data from pressure cell
        TYPE(Cell),INTENT(INOUT):: TCell
-       TYPE(Grid),INTENT(IN):: PGrid,TGrid
+         !! The target cell which can be u cell or v cell
+       TYPE(Grid),INTENT(IN):: PGrid
+	 !! The pressure grid
+       TYPE(Grid),INTENT(IN):: TGrid
+	 !! The target grid 
        TYPE(SolidObject),INTENT(IN):: BoomCase
-       REAL(KIND=dp),DIMENSION(:,:,:),allocatable,INTENT(IN)::SPp
-       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(INOUT)::VPp,VPuv,SPuv
+	 !! The Boom position 
        INTEGER(kind=it4b),INTENT(IN):: uv
+	 !! The parameter to determine the target cell is Ucell or VCell	
        INTEGER(kind=it4b):: i,j
        REAL(KIND=dp):: posi(4),valu(4),PosTar,temn,tol
        REAL(KIND=dp):: volfl,volfr,volsl,volsr,phifl,phifr,phisl,phisr
@@ -418,8 +491,6 @@ Module Clsvof
        if(uv==0) then
          do j = jbeg,jbeg+Jsize-1
            do i = ibeg,ibeg+Isize-2
-             SPuv(i,j)=0.d0
-             VPuv(i,j)=0.d0
              if(i>=3.and.i<=Isize-2) then
                posi(1)=TGrid%x(i,j)-PGrid%x(i-1,j)
                posi(2)=TGrid%x(i,j)-PGrid%x(i,j)
@@ -531,14 +602,6 @@ Module Clsvof
           !     volsr=volsl
              end if
              TCell%vof(i,j)=0.5d0*(volfl+volfr)
-             if(PCell%vof(i,j)>vofeps.and.SPp(i,j,1)>tol) then
-               SPuv(i,j)=SPuv(i,j)+SPp(i,j,1)*volfl/PCell%vof(i,j)
-               VPuv(i,j)=VPuv(i,j)+VPp(i,j)*volfl/PCell%vof(i,j)
-             end if
-             if(PCell%vof(i+1,j)>vofeps.and.SPp(i+1,j,1)>tol) then
-               SPuv(i,j)=SPuv(i,j)+SPp(i+1,j,1)*volfr/PCell%vof(i+1,j)
-               VPuv(i,j)=VPuv(i,j)+VPp(i+1,j)*volfr/PCell%vof(i+1,j)
-             end if
              if(TCell%vof(i,j)<vofeps) TCell%vof(i,j)=0.d0
              if(TCell%vof(i,j)>1.d0-vofeps-TCell%vofS(i,j)) then
                TCell%vof(i,j)=1.d0-TCell%vofS(i,j)
@@ -674,14 +737,6 @@ Module Clsvof
            !    volsr=volsl
              end if
              TCell%vof(i,j)=0.5d0*(volfl+volfr)
-             if(PCell%vof(i,j)>vofeps.and.SPp(i,j,2)>tol) then
-               SPuv(i,j)=SPuv(i,j)+SPp(i,j,2)*volfl/PCell%vof(i,j)
-               VPuv(i,j)=VPuv(i,j)+VPp(i,j)*volfl/PCell%vof(i,j)
-             end if
-             if(PCell%vof(i,j+1)>vofeps.and.SPp(i,j+1,2)>tol) then
-               SPuv(i,j)=SPuv(i,j)+SPp(i,j+1,2)*volfr/PCell%vof(i,j+1)
-               VPuv(i,j)=VPuv(i,j)+VPp(i,j+1)*volfr/PCell%vof(i,j+1)
-             end if
              if(TCell%vof(i,j)<vofeps) TCell%vof(i,j)=0.d0
              if(TCell%vof(i,j)>1.d0-vofeps-TCell%vofS(i,j))then
                TCell%vof(i,j)=1.d0-TCell%vofS(i,j)
@@ -729,15 +784,25 @@ Module Clsvof
 ! Coupled level set and volume of fluid
 !***********************************************************
     subroutine Coupled_LS_VOF(PGrid,PCell,UCell,VCell,TVar,wave, BoomCase,NondiT,dt,itt)
+      !! The subroutine solves the coupling level set and volume of fluid to update 
+      !! the new position of interface	 	
        IMPLICIT NONE
        TYPE(Grid),INTENT(IN):: PGrid
+	 !! The pressure grid 
        TYPE(Cell),INTENT(IN):: UCell,VCell
+	 !! The velocity cell
        TYPE(Cell),INTENT(INOUT),target:: PCell
-       TYPE(TVariables),INTENT(IN):: TVar
+         !! The pressure cell 
        TYPE(TWave), INTENT(in) :: wave
+         !! Wave 
+       TYPE(Variables),INTENT(IN):: TVar
+	 !! The state variables 	
        TYPE(SolidObject),INTENT(INOUT):: BoomCase
+	 !! The Boom position 
        REAL(KIND=dp),INTENT(IN):: dt,NondiT
+	 !! The time step and nondimensional time
        INTEGER(kind=it8b),INTENT(IN):: itt
+	 !! The number of iterations 
        INTEGER(kind=it4b):: i,j,ii,jj,k,nv,UpdateNorVec,tempc
        REAL(KIND=dp):: dtv,epsil
        REAL(KIND=dp),DIMENSION(:,:),allocatable:: dis,temvfx,temvfy,temlsx,temlsy
@@ -745,7 +810,7 @@ Module Clsvof
        REAL(KIND=dp):: weight(9),sumvol,sumweight,sumweight2,neighvol,voldif
        REAL(KIND=dp):: SumAllVolBig,SumAllVolSmall,ResVol
        REAL(KIND=dp):: del_x,del_y,dttol,vb
-       
+
        Vset(1,1)=0.d0;Vset(1,2)=-1.d0
        Vset(2,1)=0.d0;Vset(1,2)=1.d0
        Vset(3,1)=-1.d0;Vset(3,2)=0.d0
@@ -754,8 +819,10 @@ Module Clsvof
        Vset(6,1)=1.d0;Vset(6,2)=0.d0
        Vset(7,1)=1.d0;Vset(7,2)=-1.d0
        Vset(8,1)=1.d0;Vset(8,2)=1.d0
-       
+
+       ! Set up vector for computing normal vector
        nv = 6
+       ! The number of sub steps for solving volume of fluid and level set
        vfl=>PCell%vof
        phi=>PCell%phi
        nxs=>PCell%nxs
@@ -780,6 +847,7 @@ Module Clsvof
        allocate(temlsy(Isize,Jsize))
        BoomCase%PospO=BoomCase%Posp
        vb=BoomCase%vs
+       ! Assign velocity 
        do j = 1,JSize
          do i = 1,ISize
            if(UCell%MoExCell(i,j)/=1.and.UCell%Posnu(i,j)/=-1)then
@@ -801,6 +869,7 @@ Module Clsvof
          ve(i,0)=TVar%v(i,0)
        end do
        do k = 1,nv
+         ! Start with x-Sweep first then switch to y-Sweep in next sub step 
          if(mod(k,2)==1) then
            temvfx(:,:) = vfl(:,:)
            temlsx(:,:) = phi(:,:)
@@ -819,12 +888,6 @@ Module Clsvof
                phi(i,j)=temlsx(i,j)
                if(vfl(i,j)>=1.d0-vofeps-vfls(i,j)) vfl(i,j)=1.d0-vfls(i,j)
                if(vfl(i,j)<vofeps) vfl(i,j) = 0.d0
-               if(isnan(vfl(i,j))) then
-                 print*,'what the fuck'
-                 print*,temvfx(i,j),temvfy(i,j)
-                 print*,'clsvof_823'
-                 print*,i,j
-               end if
              end do
            end do
            call Boundary_Condition(vfl)
@@ -842,16 +905,9 @@ Module Clsvof
 
                temlsy(i,j)=temlsy(i,j)+dtv/PGrid%dy(i,j)*temlsx(i,j)*          &
                 (ve(i,j)*PCell%NEdge_Area(i,j)-ve(i,j-1)*PCell%SEdge_Area(i,j))
-          !    Correction for mass error conservation(Mark Sussmann JCP 221(2007) 469-505)
-               vfl(i,j)=temvfy(i,j)!*(1.d0-vflS(i,j))
+               vfl(i,j)=temvfy(i,j)
                if(PCell%vofS(i,j)<1.d0-epsi) then
                  phi(i,j)=temlsy(i,j)/(1.d0-PCell%vofS(i,j))
-               end if
-               if(isnan(vfl(i,j))) then
-                 print*,'what the fuck'
-                 print*,temvfx(i,j),temvfy(i,j)
-                 print*,'clsvof_858'
-                 print*,i,j
                end if
              end do
            end do
@@ -873,17 +929,10 @@ Module Clsvof
                phi(i,j)=temlsy(i,j)
                if(vfl(i,j)>=1.d0-vofeps-vfls(i,j)) vfl(i,j)=1.d0-vfls(i,j)
                if(vfl(i,j)<vofeps) vfl(i,j)=0.d0
-               if(isnan(vfl(i,j))) then
-                 print*,'what the fuck'
-                 print*,temvfx(i,j),temvfy(i,j)
-                 print*,'clsvof_888'
-                 print*,i,j
-               end if
              end do
            end do
            call Boundary_Condition(vfl)
            call Boundary_Condition(phi)
-       !    call Boundary_Condition_Vof_Phi(PGrid,NondiT+dble(k)*dtv)
            temvfx(:,:) = vfl(:,:)
            temlsx(:,:) = phi(:,:)
            UpdateNorVec=1
@@ -895,29 +944,9 @@ Module Clsvof
                 (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j))
                temlsx(i,j)=temlsx(i,j)+dtv/PGrid%dx(i,j)*temlsy(i,j)*          &
                 (ue(i,j)*PCell%EEdge_Area(i,j)-ue(i-1,j)*PCell%WEdge_Area(i,j))
-         ! Additional step to maintain mass conservation
-               vfl(i,j)=temvfx(i,j)!*(1.d0-vflS(i,j))
+               vfl(i,j)=temvfx(i,j)
                if(PCell%vofS(i,j)<1.d0-epsi) then
                  phi(i,j)=temlsx(i,j)/(1.d0-PCell%vofS(i,j))
-               end if
-         !      vfl(i,j)=(temvfx(i,j)-temvfy(i,j)*dtv*                          &
-         !                          ((ue(i,j)*PCell%EEdge_Area(i,j)-            &
-         !                            ue(i-1,j)*PCell%WEdge_Area(i,j))/         &
-         !             PGrid%dx(i,j)+(ve(i,j)*PCell%NEdge_Area(i,j)-            &
-         !             ve(i,j-1)*PCell%SEdge_Area(i,j))/PGrid%dy(i,j)))*(1.d0-vflS(i,j))
-         !      phi(i,j)=temlsx(i,j)-temlsx(i,j)*dtv*                           &
-         !                          ((ue(i,j)*PCell%EEdge_Area(i,j)-            &
-         !                            ue(i-1,j)*PCell%WEdge_Area(i,j))/         &
-         !             PGrid%dx(i,j)+(ve(i,j)*PCell%NEdge_Area(i,j)-            &
-         !             ve(i,j-1)*PCell%SEdge_Area(i,j))/PGrid%dy(i,j))
-         !      if(vfl(i,j)>=1.d0-vofeps-vfls(i,j)) vfl(i,j)=1.d0-vfls(i,j)
-         !      if(vfl(i,j)<vofeps) vfl(i,j) = 0.d0
-         !      end if
-               if(isnan(vfl(i,j))) then
-                 print*,'what the fuck'
-                 print*,temvfx(i,j),temvfy(i,j)
-                 print*,'clsvof_929'
-                 print*,i,j
                end if
              end do
            end do
@@ -926,11 +955,6 @@ Module Clsvof
          call SolidVolumeFraction(Pgrid,PCell,BoomCase)
          call Boundary_Condition(vfl)
          call Boundary_Condition(phi)
-       !  call Boundary_Condition_Vof_Phi(PGrid,NondiT+dble(k)*dtv)
-       ! this step will update the level-set field by reconstructing interface
-       ! the outputs are interface normal vector and a distance from cell center to interface
-       ! Redistribute the volume of fluid to neighbor cells
-       ! For j=1
 
          UpdateNorVec=1
          call Interface_Reconstruct(PGrid,nx,ny,dis,UpdateNorVec)
@@ -945,13 +969,7 @@ Module Clsvof
              end if
            end do
          end do
-    !     call Print_Result_Tecplot_VarP(PGrid,PCell%vof,INT8(k))
        end do
-   !    print*,'test'
-   !    print*,BoomCase%Posp%y,BoomCase%vs
-   !    print*,BoomCase%asy,dt
-   !    print*,BoomCase%Posp%y-BoomCase%asy*dt**2.d0/2.d0
-   !    print*,
        nullify(vfl,phi,vflS,phiS,nxs,nys)
        deallocate(nx,ny)
        deallocate(dis)
@@ -993,23 +1011,33 @@ Module Clsvof
 
     SUBROUTINE X_Sweep(PGrid,PCell,wave, temvf,temls,ue,ve,nx,ny,dis,dtv,itt,        &
                                          UpdateNorVec,NondiT,k)
+      !! The subroutine compute the advection equation in x direction 	
        IMPLICIT NONE
        TYPE(Grid)                                            :: PGrid
        TYPE(Cell)                                            :: PCell
        TYPE(TWave), INTENT(in)                               :: wave
-       INTEGER(kind=it4b),INTENT(IN)                         :: UpdateNorVec,k
+         !! The wave 
+       INTEGER(kind=it4b),INTENT(IN)                         :: UpdateNorVec
+        !! Option for updating the normal vector
+       INTEGER(kind=it4b),INTENT(IN)                         :: k
+        !! The present sub-step. It is used for inlet boundary condition  
        INTEGER(kind=it8b),INTENT(IN)                         :: itt
+        !! The iteration number 
        REAL(KIND=dp),INTENT(IN)                              :: dtv,NondiT
        REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN)   :: ue,ve
-       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(INOUT):: nx,ny,dis
+        !! The velocity field
+       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(INOUT):: nx,ny
+        !! The normal vector of interface 
+       REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(INOUT):: dis
+        !! The distance from cell centre to the interface  
        REAL(KIND=dp),DIMENSION(:,:),allocatable              :: temvf,temls
+        !! The temporary volume of fluid and level set 
        INTEGER(kind=it4b)                                    :: i,j
        REAL(KIND=dp)                                         :: flux,lsr,etau,ul1,xwu
        call Interface_Reconstruct(PGrid,nx,ny,dis,UpdateNorVec)
        flux = 0.d0
-     ! volume of fluid
+        !! volume of fluid
        xwu=PGrid%x(1,1)-PGrid%dx(1,1)/2.d0
-    !   if(itt==361) print*,vfl(1,155)
        do j = 1,JSize
          do i = 1,ISize
            if(vflS(i,j)<1.d0-vofeps) temvf(i,j)=temvf(i,j)/(1.d0-vflS(i,j))
@@ -1020,8 +1048,6 @@ Module Clsvof
            if(ue(i,j)>=0.d0) then
              if(vfl(i,j)>=(1.d0-vofeps).or.vfl(i,j)<=vofeps)then
                flux = vfl(i,j)*ue(i,j)*dtv
-               if(vfl(i,j)>=1.d0) flux=ue(i,j)*dtv
-               if(vfl(i,j)<0.d0) flux=0.d0
              else
                call rightflux(nx(i,j),ny(i,j),dis(i,j),vfl(i,j),nxs(i,j),      &
                     nys(i,j),phiS(i,j),vfls(i,j),PGrid%dx(i,j),PGrid%dy(i,j),  &
@@ -1033,8 +1059,6 @@ Module Clsvof
              if(i<Isize) then
                if(vfl(i+1,j)>=(1.d0-vofeps).or.vfl(i+1,j)<=vofeps) then
                  flux=vfl(i+1,j)*ue(i,j)*dtv
-                 if(vfl(i+1,j)>=1.d0) flux=ue(i,j)*dtv
-                 if(vfl(i+1,j)<0.d0) flux=0.d0
                else
                  call leftflux(nx(i+1,j),ny(i+1,j),dis(i+1,j),vfl(i+1,j),      &
                            nxs(i+1,j),nys(i+1,j),phis(i+1,j),vfls(i+1,j),      &
@@ -1047,7 +1071,7 @@ Module Clsvof
                Flux=vfl(i,j)*ue(i,j)*dtv
              end if
            end if
-           ! this may cause a problem when the solid object move to the boundary
+           ! this may cause a problem when the solid object moves to the boundary
            ! when i=1 temvf(1,j) = 1 instead of (1-vfls)
            if(i>=1)temvf(i,j)=temvf(i,j)-flux*PCell%EEdge_Area(i,j)/PGrid%dx(i,j)
            if(i<=ISize-1) then
@@ -1065,15 +1089,15 @@ Module Clsvof
      !               dsin(kw*(xwu-cw0*Time))*dcosh(kw*PGrid%y(1,j))/dsinh(kw*Hw)
          if(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0<wave%Depthw+etau) then
            ul1=ue(0,j)!kw*cw0*etau*dcosh(kw*PGrid%y(1,j))/dsinh(kw*Hw)!
-     !      Flux=dmin1(1.d0,dabs(Hw+etau-(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0))/    &
-     !                  PGrid%dy(1,j))*ul1*dtv
+         ! Flux=dmin1(1.d0,dabs(Hw+etau-(PGrid%y(1,j)-PGrid%dy(1,j)/2.d0))/   &
+         !            PGrid%dy(1,j))*ul1*dtv
            Flux=vfl(1,j)*ul1*dtv
          else
            Flux=0.d0
          end if
          temvf(1,j)=temvf(1,j)+flux*PCell%WEdge_Area(1,j)/PGrid%dx(1,j)
        end do
-     ! level set
+       ! Level set
        lsr = 0.d0
        flux = 0.d0
        do j = 1,JSize
@@ -1101,6 +1125,7 @@ Module Clsvof
            end if
          end do
        end do
+       ! At boundary 
        do j=1,Jsize
          if(ue(1,j)>=0.d0) then
            lsr=phi(1,j)+PGrid%dx(1,j)/2.d0*(1.d0-ue(1,j)*dtv/PGrid%dx(1,j))*   &
@@ -1131,6 +1156,7 @@ Module Clsvof
 
     subroutine Y_Sweep(PGrid,PCell,temvf,temls,ue,ve,nx,ny,dis,dtv,itt,        &
                                                                  UpdateNorVec)
+      !! The subroutine compute the advection equation in y direction  
        IMPLICIT NONE
        TYPE(Grid),INTENT(IN):: PGrid
        TYPE(Cell),INTENT(IN):: PCell
@@ -1254,6 +1280,9 @@ Module Clsvof
   ! build-up interface
 
     subroutine Interface_Reconstruct(PGrid,nx,ny,dis,UpdateNorVec)
+      !! The subroutine will compute the interface normal vector and distance from 
+      !! the cell center to the interface. Basically, we need all information 
+      !! about the equation of a line.   
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid
       INTEGER(kind=it4b),INTENT(IN):: UpdateNorVec
@@ -1263,11 +1292,12 @@ Module Clsvof
       do i = 1,ISize
         do j = 1,JSize
           flag=0
-          if(vfl(i,j)>=vofeps.and.vfl(i,j)<(1.d0-vofeps-vfls(i,j)).and.            &
+          ! Set up flag for checking whether the cell contains two phases or three phases
+          if(vfl(i,j)>=vofeps.and.vfl(i,j)<(1.d0-vofeps-vfls(i,j)).and.        &
                                                         vfls(i,j)<epsi)then
             flag=1
           end if
-          if(vfl(i,j)>=vofeps.and.vfl(i,j)<(1.d0-vofeps-vfls(i,j)).and.            &
+          if(vfl(i,j)>=vofeps.and.vfl(i,j)<(1.d0-vofeps-vfls(i,j)).and.        &
                                 vfls(i,j)>=epsi.and.vfls(i,j)<1.d0-epsi)then
             flag=2
           end if
@@ -1287,14 +1317,14 @@ Module Clsvof
                   nyy=(phi(i,j)-phi(i,j-1))/(PGrid%y(i,j)-PGrid%y(i,j-1))
                 endif
               endif
-          !   Test the normal vector for cell containing all three phases
+              ! Test the normal vector for cell containing all three phases
               if(vfls(i,j)>epsi.and.vfls(i,j)<1.d0-epsi) then
-          !      nxx=dsign(1.d0,nxs(i,j))*dabs(nxx)
+              ! nxx=dsign(1.d0,nxs(i,j))*dabs(nxx)
               end if
               if(vfl(i,j)>epsi.and.vfl(i,j)<1.d0-epsi) then
-          !      nxx=dsign(1.d0,nxs(i,j))*dabs(nxx)
+              ! nxx=dsign(1.d0,nxs(i,j))*dabs(nxx)
               end if
-          !   *******************************************************************
+              ! ***************************************************************
               temp = dsqrt(nxx**2.d0+nyy**2.d0)
               if(temp<1.d-14) then
                 nxx = 0.d0
@@ -1305,9 +1335,9 @@ Module Clsvof
               end if
             end if
             select case(flag)
-              case(1) ! for only 2 phases (air(gas) and liquid(fluid))
+              case(1) ! for 2 phases (gas and liquid)
                 call distance(i,j,PGrid%dx(i,j),PGrid%dy(i,j),nxx,nyy,diss)
-              case(2)
+              case(2) ! for 3 phases (gas, liquid and solid) 
                 call DistanceFluidCalculate(nxs(i,j),nys(i,j),phis(i,j),nxx,   &
                                 nyy,vfl(i,j),PGrid%dx(i,j),PGrid%dy(i,j),diss)
             end select
@@ -1327,6 +1357,8 @@ Module Clsvof
     end subroutine Interface_Reconstruct
 
     subroutine distance(i,j,dx,dy,nxx,nyy,diss)
+      !! The subroutine will compute the distance from a point to the interface.
+      !! It will compute based on the normal vector and volume of fluid. 
        IMPLICIT NONE
        INTEGER i,j
        real(dp) slop_eps,nxx,nyy,nx,ny,diss,equal_eps
@@ -1335,6 +1367,7 @@ Module Clsvof
        equal_eps = 1.d-20
        nx = dabs(nxx)
        ny = dabs(nyy)
+       ! When the interface is parallel to x or y direction 
        if(nx < slop_eps) then
           diss = (0.5d0-vfl(i,j))*dy
           return
@@ -1365,16 +1398,18 @@ Module Clsvof
           return
        else
           if(dabs(vflr-vful)<equal_eps)THEN
-	        diss=0.5d0*(dul+dlr)
-	        return
-	      end if
-	      theta=(vfl(i,j)-vful)/(vflr-vful)
-	      diss=dlr*theta+dul*(1.0d0-theta)
-	   end if
-	   return
-	end subroutine
+	    diss=0.5d0*(dul+dlr)
+	    return
+          end if
+	  theta=(vfl(i,j)-vful)/(vflr-vful)
+          diss=dlr*theta+dul*(1.0d0-theta)
+       end if
+       return
+    end subroutine
 
     subroutine frac(nx,ny,diss,dx,dy,vrt)
+      !! The subroutine computes the volume of fluid in a cell with height of dy 
+      !! and width of dx.    
        IMPLICIT NONE
        real(dp) slop_eps,nx,ny,diss,vrt,tnx,tny,dx,dy
        real(dp) xx,yy,topvf,rightvf,totalarea
@@ -1418,8 +1453,9 @@ Module Clsvof
        return
     end subroutine
 
-!   calculate flux through the top of cell
+
     subroutine topflux(nxx,nyy,diss,volf,nxss,nyss,phiss,vols,dx,dy,vdt,flux)
+      !! The subroutine calculate flux through the top of cell       
        IMPLICIT NONE
        REAL(KIND=dp),INTENT(IN):: nxx,nyy,diss,volf,nxss,nyss,phiss,vols,vdt,dx,dy
        REAL(KIND=dp),INTENT(OUT):: flux
@@ -1429,16 +1465,18 @@ Module Clsvof
           flux = 0.d0
           return
        end if
+        ! For cell contains two phases
        if(vols<epsi) then
          call frac(nxx,nyy,diss-0.5d0*(vdt-dy)*nyy,dx,vdt,flux)
        elseif(vols>=1.d0-epsi) then
          flux=volf
          return
-       else
+       else 
+        ! For cell contains three phases  
          call CellGeoCal(nxss,nyss,phiss-0.5d0*(vdt-dy)*nyss,nxx,nyy,          &
                                     diss-0.5d0*(vdt-dy)*nyy,dx,vdt,volss,flux)
          if(volf/(1.d0-vols)>=1.d0-vofeps) flux=1.d0-volss
-       ! Using the volume averaging value
+        ! Using the volume averaging value
          flux=flux/(1.d0-volss+toldeno)
          if(volf+vols>1.d0-eps) flux=1.d0
        end if
@@ -1446,8 +1484,8 @@ Module Clsvof
        return
     end subroutine
 
-!   calculate flux through the bottom of cell
     subroutine bottomflux(nxx,nyy,diss,volf,nxss,nyss,phiss,vols,dx,dy,vdt,flux)
+      !! The subroutine calculates flux through the bottom of cell
        IMPLICIT NONE
        REAL(KIND=dp),INTENT(IN):: nxx,nyy,diss,volf,nxss,nyss,phiss,vols,vdt,dx,dy
        REAL(KIND=dp),INTENT(OUT):: flux
@@ -1473,8 +1511,8 @@ Module Clsvof
        flux=flux*vdt
     end subroutine
 
-!   calculate flux through the right of cell
     subroutine rightflux(nxx,nyy,diss,volf,nxss,nyss,phiss,vols,dx,dy,udt,flux)
+      !! The subroutine calculates flux through the right of cell
        IMPLICIT NONE
        REAL(KIND=dp),INTENT(IN):: nxx,nyy,diss,volf,nxss,nyss,phiss,vols,udt,dx,dy
        REAL(KIND=dp),INTENT(OUT):: flux
@@ -1500,8 +1538,8 @@ Module Clsvof
        flux = flux*udt
     end subroutine
 
-! calculate flux throught the left of cell
     subroutine leftflux(nxx,nyy,diss,volf,nxss,nyss,phiss,vols,dx,dy,udt,flux)
+      !! The subroutine calculates flux throught the left of cell
       IMPLICIT NONE
       REAL(KIND=dp),INTENT(IN):: nxx,nyy,diss,volf,nxss,nyss,phiss,vols,udt,dx,dy
       REAL(KIND=dp),INTENT(OUT):: flux
@@ -1520,24 +1558,24 @@ Module Clsvof
         call CellGeoCal(nxss,nyss,phiss+0.5d0*(udt-dx)*nxss,nxx,nyy,           &
                                    diss+0.5d0*(udt-dx)*nxx,udt,dy,volss,flux)
         if(volf/(1.d0-vols)>=1.d0-vofeps) flux=1.d0-volss
-      ! Using the volume averaging value
+        ! Using the volume averaging value
         flux=flux/(1.d0-volss+toldeno)
         if(volf+vols>1.d0-eps) flux=1.d0
       end if
       flux = flux*udt
     end subroutine
 
-  ! Redistance from vof to level set
     subroutine Redistance(PGrid,nxx1,nyy1,diss1)
+      !! The subroutine will recompute level set from present interface configuration
       IMPLICIT NONE
-      TYPE(Grid),INTENT(IN):: PGrid
-      REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN):: nxx1,nyy1,diss1
+      TYPE(Grid),INTENT(IN) :: PGrid
+      REAL(KIND=dp),DIMENSION(:,:),allocatable,INTENT(IN) :: nxx1,nyy1,diss1
       INTEGER(kind=it4b):: i,j,ii,jj,l,m
       REAL(KIND=dp):: xv,yv,dv,deuc,dij1,dvs,del_x,del_y
       REAL(KIND=dp):: xp,yp,xoff,yoff,xfc,yfc,xs,ys,tol
       logical:: pointp
-      REAL(KIND=dp),DIMENSION(:,:),allocatable:: phiaux
-      INTEGER,DIMENSION(:,:),allocatable:: fix
+      REAL(KIND=dp),DIMENSION(:,:),allocatable :: phiaux
+      INTEGER,DIMENSION(:,:),allocatable       :: fix
       allocate(fix(Isize,Jsize))
       allocate(phiaux(Isize,Jsize))
       fix(:,:)=0
@@ -1553,7 +1591,7 @@ Module Clsvof
             do ii=-band_width,band_width
               do jj=-band_width,band_width
               ! determine the point xv on the boundary cell(i,j,k) with the
-              ! shortest distance to the cell center of (i+-ii,j+-jj)
+              ! shortest distance to the cell center of (i+ii,j+jj)
                 if(i+ii>=1.and.i+ii<=ISize.and.j+jj>=1.and.j+jj<=JSize) then
                   if(vfl(i+ii,j+jj)<0.d0+vofeps.or.                              &
                     vfl(i+ii,j+jj)>=1.d0-vofeps-vflS(i+ii,j+jj)) then
@@ -1563,6 +1601,7 @@ Module Clsvof
                     xv=PGrid%dx(i,j)*dble(l)/2.d0
                     yv=PGrid%dy(i,j)*dble(m)/2.d0
                     dvs=nxs(i,j)*xv+nys(i,j)*yv+phiS(i,j)
+                    ! Check whether the point(xv,yv) is inside the solid object
                     if(dvs<0.d0) then
                       if(dabs(yv)<vofeps) then
                         yv=PGrid%dy(i,j)/2.d0
@@ -1599,7 +1638,7 @@ Module Clsvof
                         end if
                       end if
                     end if
-
+                    ! Distance from a point to the interface 
                     dv=nxx1(i,j)*xv+nyy1(i,j)*yv+diss1(i,j)
                     if(dv*dsign(1.d0,phi(i+ii,j+jj))<=0.d0) then
                       deuc=dsqrt(((PGrid%x(i+ii,j+jj)-PGrid%x(i,j))-xv)**2.d0+ &
@@ -1614,8 +1653,8 @@ Module Clsvof
                         if(dabs(deuc)<dabs(phiaux(i+ii,j+jj)).and.             &
                                             vfl(i+ii,j+jj)<vofeps)             &
                           phiaux(i+ii,j+jj)=dabs(deuc)
-                      endif
-                   ! third step: find the projection of x' onto the interface
+                      end if
+                     ! Third step: find the projection of x' onto the interface
                     else
                       dij1=nxx1(i,j)*(PGrid%x(i+ii,j+jj)-PGrid%x(i,j))+        &
                           nyy1(i,j)*(PGrid%y(i+ii,j+jj)-PGrid%y(i,j))+diss1(i,j)
@@ -1645,7 +1684,7 @@ Module Clsvof
                              phiaux(i+ii,j+jj)=dsign(1.d0,dij1)*deuc
                         end if
                       else
-                    ! forth step: find the corner of
+                      ! Forth step: find the corner
                         xoff=dmax1(dabs(xp)-0.5d0*PGrid%dx(i,j),0.d0)
                         yoff=dmax1(dabs(yp)-0.5d0*PGrid%dy(i,j),0.d0)
                         xfc=dsign(1.d0,xp)*0.5d0*PGrid%dx(i,j)
@@ -1685,6 +1724,7 @@ Module Clsvof
           end if
         end do
       end do
+      ! Update the level set
       do i = 1,ISize
         do j = 1,JSize
           if(fix(i,j)==1) then
@@ -1716,6 +1756,7 @@ Module Clsvof
     end subroutine
 
     subroutine Normal_Vector_Irre(PGrid,i,j,nx,ny)
+      !! The subroutine computes normal vector based on level set      
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: PGrid
       INTEGER,INTENT(IN):: i,j
@@ -2130,16 +2171,14 @@ Module Clsvof
         do k = 1,temp-1
           if(k>6) then
             print*,temp
-            print*, 'fuck you bugs Clsvof_Mod 1468'
-            read(stdin,*)
+            pause 'bugs Clsvof_Mod 1468'
           end if
           pdt(k)=node(k,1)*nxf+node(k,2)*nyf+phil
         end do
         if(temp==0) then
           print*,node(1,1),node(1,2)
           print*,nxf,nyf,volf
-          print*, 'fuck you bugs Clsvof_Mod 1475'
-          read(stdin,*)
+          pause 'bugs Clsvof_Mod 1475'
         end if
         pdt(temp)=pdt(1)
 
@@ -2267,6 +2306,9 @@ Module Clsvof
     end subroutine CellGeoCal
 
     SUBROUTINE Boundary_Condition_Vof_Phi(TGrid,Time, wave)
+      !! The subroutine computes the volume fraction and the level set at 
+      !! the inlet and outlet boundary. The subroutine will be applied for 
+      !! the sinusoidal wave.   
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN):: TGrid
       REAL(KIND=dp),INTENT(IN):: Time
@@ -2392,10 +2434,9 @@ Module Clsvof
         ny(1,j)=nyy
       end do
     END SUBROUTINE Boundary_Condition_Vof_Phi
- !******************************************************************************
- !*** Describing the movement of boom                                          *
- !******************************************************************************
+
     SUBROUTINE ObjectMovement(BoomCase,dtv)
+      !! The subroutine compute the Boom position and its velocity 
       IMPLICIT NONE
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
       REAL(KIND=dp),INTENT(IN):: dtv
@@ -2410,8 +2451,9 @@ Module Clsvof
       BoomCase%YBar=BoomCase%Posp%y-dsqrt((BoomCase%Dobj/2.d0)**2.d0-          &
                    (BoomCase%Wobj/2.d0)**2.d0)-BoomCase%LBar
     END SUBROUTINE ObjectMovement
- !  Calculate the force acting on object
+
     SUBROUTINE ComputeForceObject(BoomCase,PGrid,PCell,VCell,TVar,ForceObj)
+     !! The subroutine calculates the force acting on object
       IMPLICIT NONE
       TYPE(SolidObject),INTENT(INOUT):: BoomCase
       TYPE(Grid),INTENT(IN)          :: PGrid
@@ -2472,41 +2514,14 @@ Module Clsvof
               Areatemp=Areatemp+Area
               temp=temp+1
             end if
-      !      SForce=SForce/(dble(temp)+tolDeno)
-      !      Areatemp=Areatemp/(dble(temp)+tolDeno)
             SForce=TVar%p(i,j)*PCell%WlLh(i,j)*PCell%nyS(i,j)
             Areatemp=PCell%WlLh(i,j)
-!            print*,i,j
-!            print*,SForce,Areatemp,PCell%vofS(i,j),temp
             Clp=Clp+SForce
             testArea=testArea+Areatemp
-!            if(temp==0) then
-!              print*,'problem with interpolation'
-!              print*,i,j
-!              print*,PCell%vofS(i,j)
-!              print*,
-!            end if
           end if
         end do
       end do
-!      PRINT*,'TEST FORCE******************************************************'
-!      PRINT*,TVar%p(300,80),TVar%p(301,80)
-!      print*,PCell%nyS(300,80),PCell%WlLh(300,80)
-!      print*,PCell%nyS(300,81),PCell%WlLh(300,81)
-!      print*,'VCell'
-!      print*,VCell%WEdge_Area(300,80),VCell%EEdge_Area(300,80)
-!      print*,VCell%SEdge_Area(300,80),VCell%NEdge_Area(300,80)
-!      print*,VCell%Cell_Cent(300,80,1),VCell%Cell_Cent(300,80,2)
-!      print*,
-!      print*,VCell%WEdge_Area(299,80),VCell%EEdge_Area(299,80)
-!      print*,VCell%SEdge_Area(299,80),VCell%NEdge_Area(299,80)
-!      print*,VCell%Cell_Cent(299,80,1),VCell%Cell_Cent(299,80,2)
-!      print*,
-!      print*,TVar%v(300,80),TVar%v(299,80)
-!      print*,
-!      print*,'End test force**************************************************'
-!      print*,'clp:',clp,testArea
-  !   Some problems with bottom cells
+    ! Some problems with bottom cells
       do i=1,Isize
         do j=1,Jsize-1
           if(PCell%vofS(i,j)<1.d0-epsi.and.PCell%EEdge_ARea(i,j)<epsiF.and.    &
@@ -2563,10 +2578,9 @@ Module Clsvof
       end do
       ForceObj=clf-clp
     END SUBROUTINE ComputeForceObject
-  !******************************************************************************
-  !this subroutine used to compute solid volume fraction in nextime
 
     SUBROUTINE SolidVolumeFraction(TGrid,TCell,BoomCase)
+     !! The subroutine computes solid volume fraction in the next sub-steps 
       IMPLICIT NONE
       TYPE(Grid),INTENT(IN)                   :: TGrid
       TYPE(Cell),INTENT(INOUT)                :: TCell
@@ -2582,27 +2596,16 @@ Module Clsvof
       allocate(nxx(Isize,Jsize))
       allocate(nyy(Isize,Jsize))
       allocate(VofsOld(Isize,Jsize))
-   !  for wave only
+     ! for wave only
       epsil=1.d-24
       CylBar=dsqrt((BoomCase%Dobj/2.d0)**2.d0-(BoomCase%Wobj/2.d0)**2.d0)
       VofsOld(:,:)=TCell%vofS(:,:)
       do i=1,Isize
         do j=1,Jsize
           if(isnan(TCell%vof(i,j))) then
-            print*,'test'
-            print*,i,j
-            print*,vofsOld(i,j),TCell%VofS(i,j)
-            print*,TCell%PhiS(i,j)
-            print*,nxx(i,j),nyy(i,j)
-            print*, 'ClsVof_2668'
-            read(stdin,*)
+            pause 'ClsVof_2668'
           end if
      !     For boom cylinder
-     !     dx=TGrid%x(i,j)-BoomCase%Posp%x
-     !     dy=TGrid%y(i,j)-BoomCase%Posp%y
-     !     TCell%phiS(i,j)=(dsqrt(dx**2.d0+dy**2.d0)-BoomCase%Dobj/2.d0)
-     !     nxx(i,j) = dx/dsqrt(dx**2.d0+dy**2.d0)
-     !     nyy(i,j) = dy/dsqrt(dx**2.d0+dy**2.d0)
           do ii = 0,1
             do jj = 0,1
               Pt(ii,jj)%x = -TGrid%dx(i,j)*(0.5d0-dble(ii))+TGrid%x(i,j)
@@ -2653,15 +2656,6 @@ Module Clsvof
                 /2.d0+dabs(nyy(i,j))*TGrid%dy(i,j)/2.d0+1.d-10)
           end if
           TCell%phiS(i,j)=dis
-!          if(i==2999.and.j==1115) then
-!            print*,'test cut-cell for PCell inside cylinder'
-!            print*,i,j
-!            print*,dpt(1),dpt(2)
-!            print*,TCell%phiS(i,j)
-!            print*,nxx(i,j),nyy(i,j)
-!            print*,dsqrt((TGrid%dx(i,j)/2.d0)**2.d0+(TGrid%dy(i,j)/2.d0)**2.d0)
-!            print*,
-!          end if
      !  For region at left side of boom
           if(TGrid%x(i,j)<=BoomCase%XBar1) then
      !  For region under boom
@@ -2698,14 +2692,14 @@ Module Clsvof
                 TCell%phiS(i,j)=dis
               end if
             end if
-       !  For region inside boom
+     !  For region inside boom
           else
-       !  For region under boom
+     !  For region under boom
             if(TGrid%y(i,j)<=BoomCase%YBar) then
               TCell%PhiS(i,j)=BoomCase%YBar-TGrid%y(i,j)
               nxx(i,j)=0.d0
               nyy(i,j)=-1.d0
-       !  For region inside boom bar
+     !  For region inside boom bar
             elseif(TGrid%y(i,j)<BoomCase%YBar+BoomCase%LBar) then
               dpt(1)=BoomCase%YBar-TGrid%y(i,j)
               dpt(2)=BoomCase%XBar1-TGrid%x(i,j)
@@ -2725,7 +2719,7 @@ Module Clsvof
                 nxx(i,j)=1.d0
                 nyy(i,j)=0.d0
               end if
-         !  For region inside cylinder
+      !  For region inside cylinder
             elseif(TGrid%y(i,j)<BoomCase%Posp%y) then
               if(dabs(TGrid%x(i,j)-0.5d0*(BoomCase%XBar1+BoomCase%XBar2))/     &
                 dabs(TGrid%y(i,j)-BoomCase%Posp%y)<BoomCase%Wobj/2.d0/         &
@@ -2743,14 +2737,6 @@ Module Clsvof
                   nxx(i,j)=(BoomCase%XBar2-TGrid%x(i,j))/dabs(dpt(2))
                   nyy(i,j)=-(TGrid%y(i,j)-BoomCase%YBar-BoomCase%LBar)/dabs(dpt(2))
                 end if
-!                if(i==2999.and.j==1115) then
-!                  print*,'test cut-cell for PCell special case'
-!                  print*,i,j
-!                  print*,dpt(1),dpt(2)
-!                  print*,TCell%phiS(i,j)
-!                  print*,nxx(i,j),nyy(i,j)
-!                  print*,
-!                end if
               end if
             end if
           end if
@@ -2765,18 +2751,6 @@ Module Clsvof
           call frac(nxx(i,j),nyy(i,j),TCell%phiS(i,j),TGrid%dx(i,j),           &
                                                       TGrid%dy(i,j),vol)
           TCell%vofS(i,j)=vol
-!          if(i==299.and.(j==76.or.j==77)) then
-!            print*,'Clsvof 2934'
-!            print*,i,j
-!            if(allocated(Tcell%MoExCell)) then
-!              print*,'this is Velocity cell'
-!            end if
-!            print*,TCell%phiS(i,j)
-!            print*,TCell%vofS(i,j)
-!            print*,nxx(i,j),nyy(i,j)
-!            print*,
-!          end if
-          ! Correc
           if(TCell%vofS(i,j)<epsi) TCell%vofS(i,j)=0.d0
           if(TCell%vofS(i,j)>=1.d0-epsi) TCell%vofS(i,j)=1.d0
           ! Correct VofS for bottom region of boom
@@ -2813,17 +2787,6 @@ Module Clsvof
               end if
             end if
           end if
-!          if(i==299.and.(j==76.or.j==77)) then
-!            print*,'Clsvof 2970'
-!            print*,i,j
-!            if(allocated(Tcell%MoExCell)) then
-!              print*,'this is Velocity cell'
-!            end if
-!            print*,TCell%phiS(i,j)
-!            print*,TCell%vofS(i,j)
-!            print*,nxx(i,j),nyy(i,j)
-!            print*,
-!          end if
           ! Correct VofS for region containing cylinder and bar
           if(TCell%vofS(i,j)>epsi.and.TCell%vofS(i,j)<1.d0-epsi) then
             if(TGrid%y(i,j)+TGrid%dy(i,j)/2.d0-tolp>BoomCase%Posp%y-CylBar.and. &
@@ -2902,25 +2865,8 @@ Module Clsvof
               end if
             end if
           end if
-!          if(i==2999.and.j==1114) then
-!            print*,'test inside boom'
-!            print*,TCell%phiS(i,j)
-!            print*,TCell%vofS(i,j)
-!            print*,TCell%nxS(i,j)
-!            print*,TCell%nyS(i,j)
-!            print*,
-!          end if
           TCell%nxS(i,j)=nxx(i,j)
           TCell%nyS(i,j)=nyy(i,j)
-!          if(i==2999.and.j==1115) then
-!            print*,'after inside boom'
-!            print*,i,j
-!            print*,TCell%phiS(i,j)
-!            print*,TCell%vofS(i,j)
-!            print*,TCell%nxS(i,j)
-!            print*,TCell%nyS(i,j)
-!            print*,
-!          end if
           if(TCell%vofS(i,j)<epsi) TCell%vofS(i,j)=0.d0
           if(TCell%vofS(i,j)>=1.d0-epsi) TCell%vofS(i,j)=1.d0
           if((TCell%Vof(i,j)+VofsOld(i,j)>=1.d0-epsi).or.                    &
@@ -2948,6 +2894,8 @@ Module Clsvof
     END SUBROUTINE SolidVolumeFraction
 
     SUBROUTINE EdgeGeoCalCyl(BoomCase,Pt1,Pt2,CutP,ctr)
+      !! The subroutine calculates the intersection between the interface and 
+      !! the cell edges in the case of cylinder.  
        IMPLICIT NONE
        TYPE(SolidObject),INTENT(IN)          :: BoomCase
        TYPE(Tpoint),INTENT(IN)                :: Pt1,Pt2

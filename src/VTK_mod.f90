@@ -1,13 +1,9 @@
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! -*- Mode: F90 -*- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!! VTK_mod.f90 --- VTK data file format
-!!
-!! Auteur          : Jalel Chergui (LIMSI-CNRS) <Jalel.Chergui@limsi.fr>
-!! Créé le         : Wed Jul 26 14:36:52 2006
-!! Dern. mod. par  : Jalel Chergui (LIMSI-CNRS) <Jalel.Chergui@limsi.fr>
-!! Dern. mod. le   : Wed Sep 16 14:35:06 2009
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 module vtk
+  !! VTK_mod.f90 --- VTK data file format
+  !!
+  !! Auteur          : Jalel Chergui (LIMSI-CNRS) <Jalel.Chergui@limsi.fr>
+  !! Dern. mod. par  : Jalel Chergui (LIMSI-CNRS) <Jalel.Chergui@limsi.fr>
+  !! Dern. mod. le   : Wed Sep 16 14:35:06 2009
   use PrecisionVar
   IMPLICIT NONE
 
@@ -51,41 +47,49 @@ module vtk
   contains
 
   subroutine handle_error(name, message)
+    !! The subroutine is used to print out the error with opening or writting vtk file
     IMPLICIT NONE
 
     character(len=*), INTENT(IN) :: name, message
+      !! The error message  
 
     print '(/,"   *** Error *** ", A,": ", A,/)',name, message
     stop
   end subroutine handle_error
 
   subroutine handle_warning(name, message)
+    !! The subroutine is used to print out the warning with opening or writting vtk file
     IMPLICIT NONE
     character(len=*), INTENT(IN) :: name, message
-
+      !! The warning message 
     print '(/,"   *** Warning *** ",A,": ", A,/)',name, message
   end subroutine handle_warning
 
   subroutine handle_info(name, message)
+    !! The subroutine is used to print out the information about the opening or writting vtk file 
     IMPLICIT NONE
     character(len=*), INTENT(IN) :: name, message
-
+      !! The info message 
     print '(/,"   *** Info *** ",A,": ", A,/)',name, message
   end subroutine handle_info
 
   subroutine VTK_open_file(prefix, proc_rank, num_procs, restart, fd)
+    !! The subroutine is used to open a .vtk file 	
     IMPLICIT NONE
 
     character(len=*), INTENT(IN)         :: prefix
+      !! The directory where the output files are stored
     INTEGER, optional, INTENT(IN)        :: proc_rank, num_procs, restart
+      !! Arguments for MPI
     TYPE(VTK_file_handle), INTENT(INOUT) :: fd
+      !! The  
     character(len=10) :: rank, snapshot
     character(len=80) :: f
     character(len=256):: MAIN_header
     INTEGER           :: err
     logical           :: file_opened
 
-    !... Looking for a none connected logical file unit.
+    ! Looking for a none connected logical file unit.
     fd%prefix=trim(prefix)
     fd%unit=99
     inquire(unit=fd%unit, opened=file_opened)
@@ -350,7 +354,7 @@ module vtk
     INTEGER           :: shot, code, err, nt, np, k
     logical           :: file_opened
 
-    !... Looking for a none connected logical file unit.
+    ! Looking for a none connected logical file unit.
     if (iproc == 0) then
       fd%unit=99
       inquire(unit=fd%unit, opened=file_opened)
