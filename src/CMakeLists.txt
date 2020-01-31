@@ -12,6 +12,27 @@ include_directories(${MPI_Fortran_INCLUDE_PATH} ${HYPRE_INCLUDE_DIR} ${Simcoflow
 link_directories(${MPI_Fortran_LIBRARIES})
 aux_source_directory(. SRC_LIST)
 list(APPEND SRC_LIST 
+    VTKFortran/src/third_party/BeFoR64/src/lib/befor64.F90
+    VTKFortran/src/third_party/BeFoR64/src/lib/befor64_pack_data_m.F90
+    VTKFortran/src/third_party/FoXy/src/lib/foxy.f90
+    VTKFortran/src/third_party/FoXy/src/lib/foxy_xml_file.f90
+    VTKFortran/src/third_party/FoXy/src/lib/foxy_xml_tag.F90
+    VTKFortran/src/third_party/PENF/src/lib/penf_b_size.F90
+    VTKFortran/src/third_party/PENF/src/lib/penf.F90
+    VTKFortran/src/third_party/PENF/src/lib/penf_global_parameters_variables.F90
+    VTKFortran/src/third_party/PENF/src/lib/penf_stringify.F90
+    VTKFortran/src/third_party/StringiFor/src/lib/stringifor.F90
+    VTKFortran/src/third_party/StringiFor/src/lib/stringifor_string_t.F90
+    VTKFortran/src/lib/vtk_fortran_dataarray_encoder.f90
+    VTKFortran/src/lib/vtk_fortran.f90
+    VTKFortran/src/lib/vtk_fortran_parameters.f90
+    VTKFortran/src/lib/vtk_fortran_pvtk_file.f90
+    VTKFortran/src/lib/vtk_fortran_vtk_file.f90
+    VTKFortran/src/lib/vtk_fortran_vtk_file_xml_writer_abstract.f90
+    VTKFortran/src/lib/vtk_fortran_vtk_file_xml_writer_appended.f90
+    VTKFortran/src/lib/vtk_fortran_vtk_file_xml_writer_ascii_local.f90
+    VTKFortran/src/lib/vtk_fortran_vtk_file_xml_writer_binary_local.f90
+    VTKFortran/src/lib/vtk_fortran_vtm_file.F90
     Solver_Mod.f90
     PrecisionVar_Mod.f90 
     VTK_mod.f90 
